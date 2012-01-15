@@ -2,8 +2,10 @@
 #include <v8.h>
 #include <node.h>
 
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+}
 
 using namespace v8;
 
@@ -46,13 +48,15 @@ public:
   static Handle<Value> New(const Arguments& args) {
     HandleScope scope;
     AVFormat* avformat_instance = new AVFormat();
-    
+  
+    av_register_all();
+      
     // avformat_instance->title = "Node.js";
     // avformat_instance->icon = "terminal";
 
     // Wrap our C++ object as a Javascript object
     avformat_instance->Wrap(args.This());
-
+  
     return args.This();
   }
 
@@ -95,11 +99,12 @@ public:
 		v8::String::Utf8Value v8str(args[0]);
 
 		
+		/*
     ret = avformat_open_input(&pFormatCtx, *v8str, NULL, NULL);
     if(ret<0){
       return Integer::New(ret);
     }
-    /*
+    
     ret = av_find_stream_info(pFormatCtx);
     */
 		return Integer::New(ret);

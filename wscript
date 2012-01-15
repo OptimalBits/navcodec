@@ -10,7 +10,8 @@ def configure(conf):
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon") 
-  obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
+  obj.cxxflags = ["-g", "-D__STDC_CONSTANT_MACROS", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall","-lz", "-lavformat","-lavcodec"]
+  obj.linkflags = ["-lavcodec","-lavformat"]
   obj.target = "navcodec"
   obj.source = "src/navcodec.cpp"
   # @oli
