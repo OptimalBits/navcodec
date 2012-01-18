@@ -39,6 +39,12 @@ public:
   
   static Handle<Value> GetHeight(Local<String> property, 
                                  const AccessorInfo& info);
+
+  static Handle<Value> GetBitRate(Local<String> property, 
+                                  const AccessorInfo& info);
+  
+  static Handle<Value> GetFramerate(Local<String> property, 
+                                    const AccessorInfo& info);
 };
 
 #endif // _AVCODECCONTEXT_H
