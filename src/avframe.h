@@ -12,21 +12,19 @@ extern "C" {
 
 using namespace v8;
 
-class _AVFrame : node::ObjectWrap {
-private:
-  AVFrame *pFrame;
-  
+class _AVFrame {
+
 public:
-  _AVFrame();
-  
+
+  AVFrame *pContext;
+  _AVFrame(AVFrame *pContext);
   ~_AVFrame();
   
-  static Persistent<FunctionTemplate> templ;
+  static Persistent<ObjectTemplate> templ;
   
-  static void Init(Handle<Object> target);
+  static void Init();
   
-  static Handle<Value> New(const Arguments& args);
-  
+  static Handle<Object> New(AVFrame *pFrame);
 };
 
 #endif //_AVFRAME_H

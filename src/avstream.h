@@ -1,4 +1,3 @@
-
 #ifndef _AVSTREAM_H
 #define _AVSTREAM_H
 
@@ -13,14 +12,19 @@ extern "C" {
 using namespace v8;
 
 class _AVStream  {
-private:
+
+public:
   AVStream *pContext;
   
-public:
-  _AVStream();
+  _AVStream(AVStream *pStream);
   ~_AVStream();
   
-  static Handle<Object> New(AVStream *pStream);
+  static Persistent<ObjectTemplate> templ;
+  
+  static void Init();
+  
+  static Handle<Value> New(const Arguments& args);
+  static Handle<Value> New(AVStream *pStream);
 };
 
 #endif _AVSTREAM_H

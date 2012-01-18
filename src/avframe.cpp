@@ -3,44 +3,34 @@
 
 using namespace v8;
 
-Persistent<FunctionTemplate> _AVFrame::templ;
+Persistent<ObjectTemplate> _AVFrame::templ;
 
-_AVFrame::_AVFrame(){
+_AVFrame::_AVFrame(AVFrame *pFrame){
+  pContext = pFrame;
 }
   
 _AVFrame::~_AVFrame(){
   printf("Frame Free'd\n");
-  av_free(pFrame);
+  av_free(pContext);
 }
   
-void _AVFrame::Init(Handle<Object> target){
+void _AVFrame::Init(){
   HandleScope scope;
-    
-  // Our constructor
-  Local<FunctionTemplate> templ = FunctionTemplate::New(New);
-    
-  _AVFrame::templ = Persistent<FunctionTemplate>::New(templ);
-    
-  _AVFrame::templ->InstanceTemplate()->SetInternalFieldCount(1); // 1 since this is a constructor function
-  _AVFrame::templ->SetClassName(String::NewSymbol("AVFrame"));
-    
-  // NODE_SET_PROTOTYPE_METHOD(AVFormat::persistent_function_template, "dump", Dump);
-    
-  target->Set(String::NewSymbol("AVFrame"), _AVFrame::templ->GetFunction());
+  
+  Local<ObjectTemplate> templ = ObjectTemplate::New();
+  templ = ObjectTemplate::New();
+  templ->SetInternalFieldCount(1);
+  
+  _AVFrame::templ = Persistent<ObjectTemplate>::New(templ);
 }
   
-Handle<Value> _AVFrame::New(const Arguments& args) {
+Handle<Object> _AVFrame::New(AVFrame *pFrame) {
   HandleScope scope;
-    
-  _AVFrame* instance = new _AVFrame();
-    
-  instance->pFrame = avcodec_alloc_frame();
-  if(instance->pFrame == NULL){
-    // throw expection!
-  }
-    
-  // Wrap our C++ object as a Javascript object
-  instance->Wrap(args.This());
-    
-  return args.This();
+  
+  _AVFrame *instance = new _AVFrame(pFrame);
+
+  Local<Object> obj = _AVFrame::templ->NewInstance();
+  obj->SetInternalField(0, External::New(instance));
+
+  return scope.Close(obj);
 }
