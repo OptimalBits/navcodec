@@ -9,6 +9,8 @@
 
 using namespace v8;
 
+#define VIDEO_BUFFER_SIZE 2000000
+
 NAVOutputFormat::NAVOutputFormat(){
   pFormatCtx = NULL;
   pOutputFormat = NULL;
@@ -250,30 +252,9 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
       if(instance->pVideoBuffer){
         av_free(instance->pVideoBuffer);
       }
-      instance->videoBufferSize = 2000000;
+      instance->videoBufferSize = VIDEO_BUFFER_SIZE;
       instance->pVideoBuffer = (uint8_t*) av_malloc(instance->videoBufferSize);
     }
-    
-    // allocate the encoded raw picture
-    /*
-    picture = alloc_picture(c->pix_fmt, c->width, c->height);
-    if (!picture) {
-      fprintf(stderr, "Could not allocate picture\n");
-      exit(1);
-    }
-    
-    //if the output format is not YUV420P, then a temporary YUV420P
-    // picture is needed too. It is then converted to the required
-    // output format 
-    tmp_picture = NULL;
-    if (c->pix_fmt != PIX_FMT_YUV420P) {
-      tmp_picture = alloc_picture(PIX_FMT_YUV420P, c->width, c->height);
-      if (!tmp_picture) {
-        fprintf(stderr, "Could not allocate temporary picture\n");
-        exit(1);
-      }
-    }
-    */
   }
   
   // --
