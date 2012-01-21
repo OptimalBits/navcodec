@@ -20,9 +20,7 @@
  */
 
 #include "navpixformat.h"
-
-#define OBJECT_SET_ENUM(obj, value) \
-  obj->Set(String::NewSymbol(#value), Integer::New(value))
+#include "navutils.h"
 
 Handle<Object> CreatePixelFormatsEnum(){
   HandleScope scope;
