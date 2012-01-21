@@ -57,6 +57,8 @@ Handle<Value> _AVStream::New(AVStream *pStream){
   float duration = pStream->duration*pStream->time_base.num/
                    (float)pStream->time_base.den;
   
+  duration = duration < 0? -1 : duration;
+  
   obj->Set(String::NewSymbol("duration"), Number::New(duration));
   
   return scope.Close(obj);
