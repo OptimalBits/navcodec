@@ -147,8 +147,8 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   Local<Object> options;
   Local<Object> self = args.This();
   
-  CodecID codec_id;
   AVMediaType codec_type;
+  CodecID codec_id;
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
   
@@ -167,17 +167,14 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     codec_id = instance->pOutputFormat->video_codec;
   } else if(strcmp(*v8streamType, "Audio") == 0){
     codec_type = AVMEDIA_TYPE_AUDIO;
-    codec_id = instance->pOutputFormat->audio_codec;
   }
 
   options = Object::New();
   if (args.Length()>1){
-    if(args[1]->IsNumber()){
-      codec_id = (CodecID) args[1]->ToInteger()->Value();
-    }else if(args[1]->IsObject()) {
+    if(args[1]->IsObject()) {
       options = Local<Object>::Cast(args[1]);
-    }else if((args.Length()>2) && (args[2]->IsObject())){
-      options = Local<Object>::Cast(args[2]);
+    }else {
+      return ThrowException(Exception::TypeError(String::New("Input parameter #1 should be an object")));
     }
   }
 
@@ -190,11 +187,12 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   }
   
   pCodecContext = pStream->codec;  
-  pCodecContext->codec_id = codec_id;    
+  
+  pCodecContext->codec_id = (CodecID) GET_OPTION_UINT32(options, codec, codec_id);
   
   if(codec_type == AVMEDIA_TYPE_VIDEO){
     pCodecContext->codec_type = AVMEDIA_TYPE_VIDEO;
-  
+        
     pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 400000);
     
     // TODO: Force dims to multiple of 2! (or maybe even 16) (or just give an error).
@@ -238,7 +236,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   
   if(codec_type == AVMEDIA_TYPE_AUDIO){
     pCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
-    
+
     pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 128000);
     
     pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
