@@ -10,14 +10,19 @@ Simple example:
 
 	navcodec = require('navcodec');
 
-	navcodec.transcode('myinput.mov', 'myoutput.mp4', {
+	options = {
 		width:640,
 		height:480,
 		bit_rate_audio:128000,
 		bit_rate_video:500000
+	}
+
+	navcodec.transcode('myinput.mov', 'myoutput.mp4', options, function(progress){
+		console.log(progress);
 	});
 
-This will transcode myinput.mov into myoutput.mp4 according to the given parameters.
+This will transcode myinput.mov into myoutput.mp4 according to the given options. The callback will be called with a progress variable between 0 and 1.
+
 We will be adding more options soon, to allow more flexibility.
 
 Since the transcode uses mostly *libavcodec* optimized functions, the above example will run really fast.
