@@ -25,4 +25,5 @@
 #include "avframe.h"
 #include "avstream.h"
 #include "navpixformat.h"
+#include "navcodecid.h"
 #include "navsws.h"
