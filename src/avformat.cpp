@@ -114,7 +114,6 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
     Handle<Object> frame;
     AVStream *pStream;
     AVFrame *pFrame;
-    float duration;
   } StreamFrame;
      
   StreamFrame streamFrames[16];
@@ -145,9 +144,6 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
 
     streamFrames[i].pStream = pStream;
     streamFrames[i].pFrame = avcodec_alloc_frame();
-    streamFrames[i].duration = pStream->duration * 
-                               pStream->time_base.num /
-                               (float)pStream->time_base.den;
 
     Handle<Object> frame = _AVFrame::New(streamFrames[i].pFrame);
     streamFrames[i].frame = frame;
@@ -203,11 +199,7 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
         argv[0] = streamFrames[i].stream;
         argv[1] = streamFrames[i].frame;
         
-        float currentTime = pFrame->pkt_pts* pStream->time_base.num / 
-                            (float) pStream->time_base.den;
-        
-        argv[2] = Number::New(currentTime/streamFrames[i].duration);
-        
+        argv[2] = Integer::New(instance->pFormatCtx->pb->pos);        
         callback->Call(Context::GetCurrent()->Global(), 3, argv);
       }
     }
