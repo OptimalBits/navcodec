@@ -114,6 +114,7 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
     Handle<Object> frame;
     AVStream *pStream;
     AVFrame *pFrame;
+    float duration;
   } StreamFrame;
      
   StreamFrame streamFrames[16];
@@ -130,17 +131,24 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
   streams = Local<Array>::Cast(args[0]);
   callback = Local<Function>::Cast(args[1]);
   
-  Handle<Value> argv[2];
+  Handle<Value> argv[3];
  
   //
   // Create the required frames and associate every frame to a stream.
   // And open codecs.
   //
   for(unsigned int i=0;i<streams->Length(); i++){
-    streamFrames[i].stream = streams->Get(i)->ToObject();
-    streamFrames[i].pStream = ((_AVStream*)Local<External>::Cast(streamFrames[i].stream->GetInternalField(0))->Value())->pContext;
-    streamFrames[i].pFrame = avcodec_alloc_frame();
+    AVStream *pStream;
     
+    streamFrames[i].stream = streams->Get(i)->ToObject();
+    pStream = ((_AVStream*)Local<External>::Cast(streamFrames[i].stream->GetInternalField(0))->Value())->pContext;
+
+    streamFrames[i].pStream = pStream;
+    streamFrames[i].pFrame = avcodec_alloc_frame();
+    streamFrames[i].duration = pStream->duration * 
+                               pStream->time_base.num /
+                               (float)pStream->time_base.den;
+
     Handle<Object> frame = _AVFrame::New(streamFrames[i].pFrame);
     streamFrames[i].frame = frame;
     
@@ -194,7 +202,13 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
       if(finished){
         argv[0] = streamFrames[i].stream;
         argv[1] = streamFrames[i].frame;
-        callback->Call(Context::GetCurrent()->Global(), 2, argv);
+        
+        float currentTime = pFrame->pkt_pts* pStream->time_base.num / 
+                            (float) pStream->time_base.den;
+        
+        argv[2] = Number::New(currentTime/streamFrames[i].duration);
+        
+        callback->Call(Context::GetCurrent()->Global(), 3, argv);
       }
     }
     

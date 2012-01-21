@@ -54,6 +54,11 @@ Handle<Value> _AVStream::New(AVStream *pStream){
   
   obj->Set(String::NewSymbol("codec"), codec);
   
+  float duration = pStream->duration*pStream->time_base.num/
+                   (float)pStream->time_base.den;
+  
+  obj->Set(String::NewSymbol("duration"), Number::New(duration));
+  
   return scope.Close(obj);
 }
 HandleScope scope;
