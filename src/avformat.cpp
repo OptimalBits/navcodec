@@ -11,8 +11,8 @@ AVFormat::AVFormat(){
 }
   
 AVFormat::~AVFormat(){
-  // avformat_close_input(&pFormatCtx);
-  av_close_input_file(pFormatCtx);
+  avformat_close_input(&pFormatCtx);
+  //av_close_input_file(pFormatCtx);
   free(filename);
 }
 
@@ -136,12 +136,16 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
     }
   }
   
+  //
   // Start decoding
+  //
   AVPacket packet;
   int ret, finished;
   
   while ((ret=av_read_frame(instance->pFormatCtx, &packet))>=0) {
     unsigned int i;
+    int res;
+    
     AVStream *pStream = NULL;
     AVFrame *pFrame = NULL;
     
@@ -154,7 +158,19 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
     }
         
     if(pStream){
-      avcodec_decode_video2(pStream->codec, pFrame, &finished, &packet);
+      res = -1;
+      
+      if(pStream->codec->codec_type == AVMEDIA_TYPE_AUDIO){
+        res = avcodec_decode_audio4(pStream->codec, pFrame, &finished, &packet);
+      }
+      if(pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO){
+        res = avcodec_decode_video2(pStream->codec, pFrame, &finished, &packet);
+      }
+      
+      if(res<0){
+        return ThrowException(Exception::Error(String::New("Error decoding frame")));
+      }
+      
       if(finished){
         argv[0] = streamFrames[i].stream;
         argv[1] = streamFrames[i].frame;
@@ -167,7 +183,7 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
   
   // Close all the codecs from the given streams.
   if (ret<0) {
-    Local<Value> err = Exception::Error(String::New("Something went wrong!"));
+    Local<Value> err = Exception::Error(String::New("Error reading frame"));
     Local<Value> argv[] = { err };
     callback->Call(Context::GetCurrent()->Global(), 1, argv);
   } else {

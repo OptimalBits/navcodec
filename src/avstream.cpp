@@ -22,17 +22,6 @@ void _AVStream::Init(){
   _AVStream::templ = Persistent<ObjectTemplate>::New(templ);
 }
 
-Handle<Value> _AVStream::New(const Arguments& args){
-  HandleScope scope;
-  
-  /*
-  AVStream *pStream = avformat_new_stream(
-  
-  AVFormat* instance = new AVFormat();
-  AVFormatContext *pFormatCtx;
-  */
-}
-
 Handle<Value> _AVStream::New(AVStream *pStream){
   HandleScope scope;
   

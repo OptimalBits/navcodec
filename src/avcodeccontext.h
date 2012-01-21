@@ -42,9 +42,19 @@ public:
 
   static Handle<Value> GetBitRate(Local<String> property, 
                                   const AccessorInfo& info);
+
+  static Handle<Value> GetSampleFmt(Local<String> property, 
+                                    const AccessorInfo& info);
+
+  static Handle<Value> GetSampleRate(Local<String> property, 
+                                    const AccessorInfo& info);
+
+  static Handle<Value> GetChannels(Local<String> property, 
+                                    const AccessorInfo& info);
   
   static Handle<Value> GetFramerate(Local<String> property, 
                                     const AccessorInfo& info);
 };
+
 
 #endif // _AVCODECCONTEXT_H

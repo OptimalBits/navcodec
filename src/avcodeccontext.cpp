@@ -1,5 +1,6 @@
 
 #include "avcodeccontext.h"
+#include "navutils.h"
 
 using namespace v8;
 
@@ -11,6 +12,9 @@ AVCodecContext *GetCodecContext(const AccessorInfo& info){
   Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
   return (AVCodecContext*) wrap->Value();
 }
+
+#define GET_CODEC_CONTEXT(self)\
+    (AVCodecContext*)(Local<External> wrap = Local<External>::Cast(self->GetInternalField(0))->Value())
 
 Persistent<ObjectTemplate> _AVCodecContext::templ;
 
@@ -32,6 +36,9 @@ void _AVCodecContext::Init(){
   templ->SetAccessor(String::New("width"), GetWidth, NoopSet);
   templ->SetAccessor(String::New("height"), GetHeight, NoopSet);
   templ->SetAccessor(String::New("bit_rate"), GetBitRate, NoopSet);
+  templ->SetAccessor(String::New("sample_fmt"), GetSampleFmt, NoopSet);
+  templ->SetAccessor(String::New("sample_rate"), GetSampleRate, NoopSet);
+  templ->SetAccessor(String::New("channels"), GetChannels, NoopSet);
   templ->SetAccessor(String::New("framerate"), GetFramerate, NoopSet);
   
 //  templ->SetAccessor(String::New("pix_fmt"), GetPixFmt, NoopSet);
@@ -47,6 +54,14 @@ Handle<Object> _AVCodecContext::New(AVCodecContext *pContext) {
   obj->SetInternalField(0, External::New(pContext));
     
   NODE_SET_METHOD(obj, "open", Open);
+  
+  Local<Object> timeBase = Object::New();
+  
+  SET_KEY_VALUE(timeBase, "num", Integer::New(pContext->time_base.num));
+  SET_KEY_VALUE(timeBase, "den", Integer::New(pContext->time_base.den));
+  
+  SET_KEY_VALUE(obj, "time_base", timeBase);
+  SET_KEY_VALUE(obj, "ticks_per_frame", Integer::New(pContext->ticks_per_frame));
 
   return scope.Close(obj);
 }
@@ -116,6 +131,27 @@ Handle<Value> _AVCodecContext::GetBitRate(Local<String> property,
   return scope.Close(bit_rate);
 }
 
+Handle<Value> _AVCodecContext::GetSampleFmt(Local<String> property, 
+                                          const AccessorInfo& info) {
+  HandleScope scope;
+  AVCodecContext *pCodecCtx = GetCodecContext(info);
+  Handle<Integer> sample_fmt = Integer::New(pCodecCtx->sample_fmt);
+  return scope.Close(sample_fmt);
+}
+Handle<Value> _AVCodecContext::GetSampleRate(Local<String> property, 
+                                             const AccessorInfo& info) {
+  HandleScope scope;
+  AVCodecContext *pCodecCtx = GetCodecContext(info);
+  Handle<Integer> sample_rate = Integer::New(pCodecCtx->sample_rate);
+  return scope.Close(sample_rate);
+}
+Handle<Value> _AVCodecContext::GetChannels(Local<String> property, 
+                                          const AccessorInfo& info) {
+  HandleScope scope;
+  AVCodecContext *pCodecCtx = GetCodecContext(info);
+  Handle<Integer> channels = Integer::New(pCodecCtx->channels);
+  return scope.Close(channels);
+}
 Handle<Value> _AVCodecContext::GetFramerate(Local<String> property, 
                                          const AccessorInfo& info) {
   HandleScope scope;

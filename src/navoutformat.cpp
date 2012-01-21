@@ -10,19 +10,27 @@
 using namespace v8;
 
 #define VIDEO_BUFFER_SIZE 2000000
+#define AUDIO_BUFFER_SIZE 10000
+
 
 NAVOutputFormat::NAVOutputFormat(){
   pFormatCtx = NULL;
   pOutputFormat = NULL;
   filename = NULL;
+  
   pVideoBuffer = NULL;
   videoBufferSize = 0;
+  
+  pAudioBuffer = NULL;
+  audioBufferSize = 0;
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
   // NAVOutputFormat_close_input(&pFormatCtx);
   av_free(pVideoBuffer);
-  av_close_input_file(pFormatCtx);
+  av_free(pAudioBuffer);
+  //av_close_input_file(pFormatCtx);
+  avformat_close_input(&pFormatCtx);
   free(filename);
 }
 
@@ -111,13 +119,6 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   return self;
 }
 
-//  obj->Has(String::New(#key))?
-#define GET_OPTION(obj, key, conv, default_val) \
-  obj->Get(String::New(#key))->conv()
-
-#define GET_OPTION_UINT32(obj, key, val) \
-  obj->Has(String::New(#key))?obj->Get(String::New(#key))->Uint32Value():val
-
 // (stream_type, [codecId])
 Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   HandleScope scope;
@@ -126,6 +127,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   Local<Object> self = args.This();
   
   CodecID codec_id;
+  AVMediaType codec_type;
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
   
@@ -138,8 +140,16 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   }
 
   String::Utf8Value v8streamType(args[0]);
+  
+  if(strcmp(*v8streamType, "Video") == 0){
+    codec_type = AVMEDIA_TYPE_VIDEO;
+    codec_id = instance->pOutputFormat->video_codec;
+  } else if(strcmp(*v8streamType, "Audio") == 0){
+    codec_type = AVMEDIA_TYPE_AUDIO;
+    codec_id = instance->pOutputFormat->audio_codec;
+  }
 
-  codec_id = instance->pOutputFormat->video_codec;
+  options = Object::New();
   if (args.Length()>1){
     if(args[1]->IsNumber()){
       codec_id = (CodecID) args[1]->ToInteger()->Value();
@@ -148,25 +158,25 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     }else if((args.Length()>2) && (args[2]->IsObject())){
       options = Local<Object>::Cast(args[2]);
     }
-  } 
-    
-  if(strcmp(*v8streamType, "Video") == 0){
-    AVCodecContext *pCodecContext;
-    AVStream *pStream;
-    
-    pStream = avformat_new_stream(instance->pFormatCtx, NULL);
-    if (!pStream) {
-      return ThrowException(Exception::Error(String::New("Could not create stream")));
-    }
-    
-    pCodecContext = pStream->codec;
-    
-    pCodecContext->codec_id = codec_id;    
+  }
+
+  AVCodecContext *pCodecContext;
+  AVStream *pStream;
+  
+  pStream = avformat_new_stream(instance->pFormatCtx, NULL);
+  if (!pStream) {
+    return ThrowException(Exception::Error(String::New("Could not create stream")));
+  }
+  
+  pCodecContext = pStream->codec;  
+  pCodecContext->codec_id = codec_id;    
+  
+  if(codec_type == AVMEDIA_TYPE_VIDEO){
     pCodecContext->codec_type = AVMEDIA_TYPE_VIDEO;
-    
+  
     pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 400000);
-      
-    // TODO: Force dims to multiple of 2! (or maybe even 16)
+    
+    // TODO: Force dims to multiple of 2! (or maybe even 16) (or just give an error).
     pCodecContext->width = GET_OPTION_UINT32(options, width, 480);
     pCodecContext->height = GET_OPTION_UINT32(options, height, 270);
     
@@ -175,8 +185,18 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     // timebase should be 1/framerate and timestamp increments should be
     // identically 1.
     
-    pCodecContext->time_base.den = GET_OPTION_UINT32(options, framerate, 25);
-    pCodecContext->time_base.num = 1;
+    if(options->Has(String::New("time_base"))){
+      Local<Object> timeBase = 
+        Local<Object>::Cast(options->Get(String::New("time_base")));
+      
+      pCodecContext->time_base.num = GET_OPTION_UINT32(timeBase, num, 1);
+      pCodecContext->time_base.den = GET_OPTION_UINT32(timeBase, den, 25);
+    }else {
+      pCodecContext->time_base.num = 1;
+      pCodecContext->time_base.den = GET_OPTION_UINT32(options, framerate, 25);
+    }
+
+    pCodecContext->ticks_per_frame = GET_OPTION_UINT32(options, ticks_per_frame, 1);
     
     // emit one intra frame every gop_size frames at most
     pCodecContext->gop_size = GET_OPTION_UINT32(options, gop_size, 12);
@@ -193,21 +213,30 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
       // the motion of the chroma plane does not match the luma plane.
       pCodecContext->mb_decision=2;
     }
+   }
+  
+  if(codec_type == AVMEDIA_TYPE_AUDIO){
+    pCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
     
-    // some formats want stream headers to be separate
-    if(instance->pFormatCtx->oformat->flags & AVFMT_GLOBALHEADER){
-      pCodecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
-    }
+    pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 128000);
     
-    Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
-    Handle<Value> stream = _AVStream::New(pStream);
-    
-    streams->Set(0,stream);
-    
-    return stream;
+    pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
+    pCodecContext->sample_rate = GET_OPTION_UINT32(options, sample_rate, 44100);
+    pCodecContext->channels = GET_OPTION_UINT32(options, channels, 2);;
   }
-
-  return Undefined();
+  
+  // some formats want stream headers to be separate
+  
+  if(instance->pFormatCtx->oformat->flags & AVFMT_GLOBALHEADER){
+    pCodecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
+  }
+  
+  Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
+  Handle<Value> stream = _AVStream::New(pStream);
+  
+  streams->Set(streams->Length(),stream);
+  
+  return stream;
 }
 
 Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
@@ -237,7 +266,6 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
       return ThrowException(Exception::Error(String::New("Could not open codec")));
     }
     
-    // Do Video or Audio specific initializations...
     if(pCodecContext->codec_type == AVMEDIA_TYPE_VIDEO){
       hasVideo = true;
     }
@@ -246,7 +274,8 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
       hasAudio = true;
     }
   }
-  
+
+  // Do Video or Audio specific initializations...
   if(hasVideo){
     if (!(instance->pFormatCtx->oformat->flags & AVFMT_RAWPICTURE)) {
       if(instance->pVideoBuffer){
@@ -255,6 +284,11 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
       instance->videoBufferSize = VIDEO_BUFFER_SIZE;
       instance->pVideoBuffer = (uint8_t*) av_malloc(instance->videoBufferSize);
     }
+  }
+  
+  if(hasAudio){
+    instance->audioBufferSize = AUDIO_BUFFER_SIZE;
+    instance->pAudioBuffer = (uint8_t*) av_malloc(instance->audioBufferSize);
   }
   
   // --
@@ -269,27 +303,6 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   
   return Undefined();
 }
-
-static AVFrame *alloc_picture(enum PixelFormat pix_fmt, int width, int height)
-{
-  AVFrame *picture;
-  uint8_t *picture_buf;
-  int size;
-  
-  picture = avcodec_alloc_frame();
-  if (!picture)
-    return NULL;
-  size = avpicture_get_size(pix_fmt, width, height);
-  picture_buf = (uint8_t*) av_malloc(size);
-  if (!picture_buf) {
-    av_free(picture);
-    return NULL;
-  }
-  avpicture_fill((AVPicture *)picture, picture_buf,
-                 pix_fmt, width, height);
-  return picture;
-}
-
 
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
@@ -322,13 +335,15 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
     if (outSize > 0) {
       AVPacket packet;
       av_init_packet(&packet);
-    
+        
+      //packet.pts = pCodecContext->coded_frame->pts;
+      /*
       if (pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
-        packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
+        packet.pts = av_rescale_q(pCodecContext->coded_frame->pts, 
                                  pCodecContext->time_base, 
-                                 pCodecContext->time_base);
+                                 pStream->time_base);
       }
-      
+      */
       if(pCodecContext->coded_frame->key_frame){
         packet.flags |= AV_PKT_FLAG_KEY;
       }
@@ -340,6 +355,40 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
       // write the compressed frame in the media file
       ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
     }
+  }
+  
+  if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){
+    int gotPacket;
+    AVPacket packet;
+    av_init_packet(&packet);
+    
+    packet.size = avcodec_encode_audio(pCodecContext, 
+                                       instance->pAudioBuffer, 
+                                       instance->audioBufferSize, 
+                                       (const short int*)pFrame->data[0]);
+    packet.data = instance->pAudioBuffer;
+    
+    if (pCodecContext->coded_frame && 
+        pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
+      packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
+                               pCodecContext->time_base, 
+                               pStream->time_base);
+    }
+  
+    packet.flags |= AV_PKT_FLAG_KEY;
+    packet.stream_index = pStream->index;
+    
+    /*  // For version > 0.8  
+     ret = avcodec_encode_audio2(pCodecContext, 
+                                 &packet,
+                                 pFrame,
+                                 &gotPacket);
+    
+    if((ret == 0) && (gotPacket)){
+      ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
+    }
+    */
+    ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
   }
   
   if (ret) {

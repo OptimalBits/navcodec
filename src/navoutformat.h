@@ -10,6 +10,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/mathematics.h>
 }
 
 using namespace v8;
@@ -23,6 +24,9 @@ private:
   
   uint8_t *pVideoBuffer;
   int videoBufferSize;
+
+  uint8_t *pAudioBuffer;
+  int audioBufferSize;
   
 public:
   NAVOutputFormat();
