@@ -23,9 +23,30 @@ Simple example:
 
 This will transcode myinput.mov into myoutput.mp4 according to the given options. The callback will be called with a progress variable between 0 and 1.
 
-We will be adding more options soon, to allow more flexibility.
+We will be adding more options soon to allow more flexibility.
 
 Since the transcode uses mostly *libavcodec* optimized functions, the above example will run really fast.
+
+
+The function transcode is implemented in javascript using lower level *libavcodec* functions, lets for example check how to open a media file and start decoding frames:
+
+		nav = require('navcodec');
+
+		inputFormat = nav.AVFormat('myinput.mp4');
+
+		inputFormat.dump();
+
+		inputFormat.decode(inputFormat.streams, function(stream, frame, pos){
+			// Do something with frame...
+
+		});
+
+As you can see, the decode function will call the callback function for every frame that it decodes from the input that is part of the given streams. In this case we used all of the streams available in the input file, but we could have just used only the audio or video stream.
+
+The frames returned by decode can be processed, for example we have the module NAVSws, used for scaling and pixel format conversion.
+
+We can also access to the encoder. 
+
 
 Install
 -
@@ -74,11 +95,16 @@ you can get a list of other configuration options using:
 
 		make install
 
+References
+-
+
+[Ubuntu HOWTO: Install and use the latest FFmpeg and x264](http://ubuntuforums.org/showthread.php?t=786095)
+
+
 Todo
 -
 
 - Make Asynchronous.
-- Add Progress support.
 - Fix Memory Leaks.
 
 License
