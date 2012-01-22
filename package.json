@@ -2,7 +2,7 @@
   "author": "Manuel Astudillo <manuel@optimalbits.com> (http://optimalbits.com)",
   "name": "navcodec",
   "description": "libavcodec bindings for node",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "./index.js",
   "scripts": {
     "preinstall": "node-waf configure build",
