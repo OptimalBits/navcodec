@@ -167,6 +167,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     codec_id = instance->pOutputFormat->video_codec;
   } else if(strcmp(*v8streamType, "Audio") == 0){
     codec_type = AVMEDIA_TYPE_AUDIO;
+    codec_id = instance->pOutputFormat->audio_codec;
   }
 
   options = Object::New();
@@ -325,6 +326,8 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
 
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
+  AVPacket packet;
+  
   int ret = 0;
 
   if(args.Length()<2){
@@ -341,6 +344,11 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
 
   AVCodecContext *pCodecContext = pStream->codec;
   
+  if((pCodecContext->codec_type != AVMEDIA_TYPE_VIDEO) && 
+     (pCodecContext->codec_type != AVMEDIA_TYPE_AUDIO)){
+    return Undefined();
+  }
+  
   if(pCodecContext->codec_type == AVMEDIA_TYPE_VIDEO){
     int outSize = avcodec_encode_video(pCodecContext, 
                                        instance->pVideoBuffer, 
@@ -352,17 +360,8 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   
     // if zero size, it means the image was buffered
     if (outSize > 0) {
-      AVPacket packet;
       av_init_packet(&packet);
-        
-      //packet.pts = pCodecContext->coded_frame->pts;
-      /*
-      if (pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
-        packet.pts = av_rescale_q(pCodecContext->coded_frame->pts, 
-                                 pCodecContext->time_base, 
-                                 pStream->time_base);
-      }
-      */
+
       if(pCodecContext->coded_frame->key_frame){
         packet.flags |= AV_PKT_FLAG_KEY;
       }
@@ -370,15 +369,10 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
       packet.stream_index = pStream->index;
       packet.data = instance->pVideoBuffer;
       packet.size = outSize;
-    
-      // write the compressed frame in the media file
-      ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
     }
   }
   
   if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){
-    int gotPacket;
-    AVPacket packet;
     av_init_packet(&packet);
     
     packet.size = avcodec_encode_audio(pCodecContext, 
@@ -386,18 +380,13 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
                                        instance->audioBufferSize, 
                                        (const short int*)pFrame->data[0]);
     packet.data = instance->pAudioBuffer;
-    
-    if (pCodecContext->coded_frame && 
-        pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
-      packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
-                               pCodecContext->time_base, 
-                               pStream->time_base);
-    }
   
     packet.flags |= AV_PKT_FLAG_KEY;
     packet.stream_index = pStream->index;
     
     /*  // For version > 0.8  
+     int gotPacket;
+
      ret = avcodec_encode_audio2(pCodecContext, 
                                  &packet,
                                  pFrame,
@@ -407,9 +396,17 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
       ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
     }
     */
-    ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
   }
   
+  if (pCodecContext->coded_frame && 
+      pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
+    packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
+                             pCodecContext->time_base, 
+                             pStream->time_base);
+  }
+  
+  ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
+
   if (ret) {
     return ThrowException(Exception::Error(String::New("Error writing frame")));
   }
