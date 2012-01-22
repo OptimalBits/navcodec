@@ -47,12 +47,12 @@ NAVOutputFormat::NAVOutputFormat(){
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
-  // NAVOutputFormat_close_input(&pFormatCtx);
   av_free(pVideoBuffer);
   av_free(pAudioBuffer);
-  //av_close_input_file(pFormatCtx);
-  avformat_close_input(&pFormatCtx);
+  av_free(pFormatCtx);
   free(filename);
+  
+  printf("Called NAVOutputFormat destructor");
 }
 
 Persistent<FunctionTemplate> NAVOutputFormat::templ;
@@ -427,29 +427,23 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   // was freed on av_codec_close()
   av_write_trailer(instance->pFormatCtx);
   
-  /* close each codec */
-  // For each stream in context
-  /*
-  {
-    avcodec_close(st->codec);
-    av_free(picture->data[0]);
-    av_free(picture);
-    if (tmp_picture) {
-      av_free(tmp_picture->data[0]);
-      av_free(tmp_picture);
-    }
-    av_free(video_outbuf);
-  }
-   
-   av_freep(&oc->streams[i]->codec);
-   av_freep(&oc->streams[i]);
-  */
+  Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
   
+  for(unsigned int i=0; i<streams->Length();i++){
+    Local<Object> stream = Local<Object>::Cast(streams->Get(i));
+    AVStream *pStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+
+    avcodec_close(pStream->codec);
+    av_free(pStream->codec);
+    av_free(pStream);
+  }
+    
   if (!(instance->pOutputFormat->flags & AVFMT_NOFILE)) {
     avio_close(instance->pFormatCtx->pb);
   }
   
   av_free(instance->pFormatCtx);
+  instance->pFormatCtx = NULL;
   
   return Undefined();
 }

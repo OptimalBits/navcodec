@@ -30,7 +30,6 @@ _AVFrame::_AVFrame(AVFrame *pFrame){
 }
   
 _AVFrame::~_AVFrame(){
-  printf("Frame Free'd\n");
   av_free(pContext);
 }
   

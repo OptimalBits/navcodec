@@ -35,6 +35,7 @@ NAVSws::NAVSws(){
 NAVSws::~NAVSws(){
   sws_freeContext(pContext);
   av_free(pFrame);
+  av_free(pFrameBuffer);
 }
 
 Persistent<FunctionTemplate> NAVSws::templ;
@@ -89,8 +90,7 @@ Handle<Value> NAVSws::New(const Arguments& args) {
     if(instance->pContext == NULL) {
       return ThrowException(Exception::TypeError(String::New("Could not init conversion context")));
     }
-  
-    uint8_t *frameBuffer;
+
     int frameBufferSize;
   
     instance->pFrame = avcodec_alloc_frame();
@@ -101,17 +101,17 @@ Handle<Value> NAVSws::New(const Arguments& args) {
                                          pDstStream->codec->width, 
                                          pDstStream->codec->height);
   
-    frameBuffer = (uint8_t*) av_malloc(frameBufferSize); // Where is this buffer freed?
-    if (!frameBuffer){
+    instance->pFrameBuffer = (uint8_t*) av_malloc(frameBufferSize); // Where is this buffer freed?
+    if (!instance->pFrameBuffer ){
       av_free(instance->pFrame);
       instance->pFrame = NULL;
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame buffer")));
     }
   
-    memset(frameBuffer, 0, frameBufferSize);
+    memset(instance->pFrameBuffer, 0, frameBufferSize);
   
     avpicture_fill((AVPicture *)instance->pFrame, 
-                   frameBuffer,
+                   instance->pFrameBuffer,
                    pDstStream->codec->pix_fmt, 
                    pDstStream->codec->width, 
                    pDstStream->codec->height);

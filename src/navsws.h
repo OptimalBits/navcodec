@@ -38,6 +38,7 @@ class NAVSws : node::ObjectWrap {
 private:
   struct SwsContext *pContext;
   AVFrame *pFrame;
+  uint8_t *pFrameBuffer;
   bool passthrough;
   
 public:

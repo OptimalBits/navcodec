@@ -30,6 +30,7 @@ _AVStream::_AVStream(AVStream *pStream){
   this->pContext = pStream;
 }
 _AVStream::~_AVStream(){
+  av_free(this->pContext);
 }
 
 void _AVStream::Init(){
