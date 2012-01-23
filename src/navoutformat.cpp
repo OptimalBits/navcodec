@@ -326,6 +326,7 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
 
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
+  int gotPacket = 0;
   AVPacket packet;
   
   int ret = 0;
@@ -369,33 +370,24 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
       packet.stream_index = pStream->index;
       packet.data = instance->pVideoBuffer;
       packet.size = outSize;
+      
+      gotPacket = 1;
     }
   }
   
   if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){
     av_init_packet(&packet);
     
-    packet.size = avcodec_encode_audio(pCodecContext, 
-                                       instance->pAudioBuffer, 
-                                       instance->audioBufferSize, 
-                                       (const short int*)pFrame->data[0]);
     packet.data = instance->pAudioBuffer;
-  
+    packet.size = instance->audioBufferSize;
+    
+    ret = avcodec_encode_audio2(pCodecContext, &packet, pFrame, &gotPacket);
+    if(ret<0){
+      return ThrowException(Exception::Error(String::New("Error encoding audio frame")));
+    }
+    
     packet.flags |= AV_PKT_FLAG_KEY;
     packet.stream_index = pStream->index;
-    
-    /*  // For version > 0.8  
-     int gotPacket;
-
-     ret = avcodec_encode_audio2(pCodecContext, 
-                                 &packet,
-                                 pFrame,
-                                 &gotPacket);
-    
-    if((ret == 0) && (gotPacket)){
-      ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
-    }
-    */
   }
   
   if (pCodecContext->coded_frame && 
@@ -405,10 +397,12 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
                              pStream->time_base);
   }
   
-  ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
-
-  if (ret) {
-    return ThrowException(Exception::Error(String::New("Error writing frame")));
+  if (gotPacket) {
+//    ret = av_write_frame(instance->pFormatCtx, &packet);
+    ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
+    if (ret) {
+      return ThrowException(Exception::Error(String::New("Error writing frame")));
+    }
   }
   
   return Undefined();

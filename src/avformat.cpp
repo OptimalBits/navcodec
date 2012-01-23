@@ -32,7 +32,6 @@ AVFormat::AVFormat(){
   
 AVFormat::~AVFormat(){
   avformat_close_input(&pFormatCtx);
-  //av_close_input_file(pFormatCtx);
   free(filename);
 }
 
