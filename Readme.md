@@ -54,13 +54,16 @@ Install
 navcodec depends on [libavcodec](http://libav.org), and this library
 must be installed before you can install this module using npm. 
 
-The library has been tested with libavcodec version 0.7.4 and 0.8 beta 2.
+The library needed is libavcodec version 0.8 and above. Version 0.8 includes some new APIs, that are used by this extension.
 
 For most unixes there are packages available, in ubuntu for example use *libavcodec-dev*. If you want you can also compile the source code with your preferred settings, this can be useful if you want to get the maximum performance from the library.
 
 For Mac OSX use brew and install the ffmpeg package.
 
 	brew install ffmpeg
+
+Note that version 0.8 of libavcodec is brand new and the afore mentioned package managers may not have yet updated it.
+
 
 When the libavcodec dependencies are fulfilled, just use npm to install the package:
 
@@ -71,12 +74,12 @@ When the libavcodec dependencies are fulfilled, just use npm to install the pack
 Compiling libavcodec
 -
 
-- Download the latest stable 0.7 release from [libav.org](http://libav.org/download.html#release_0.7)
+- Download the latest stable 0.8 release from [libav.org](http://libav.org/download.html#release_0.8)
 
 - Uncompress the tarball, Ex:
   
-	tar -xvf libav-0.7.4.tar.gz
-	cd libav-0.7.4
+	tar -xvf libav-0.8.tar.gz
+	cd libav-0.8
   
 - Configure your makefile, example:
 
