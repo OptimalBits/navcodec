@@ -51,6 +51,7 @@ extern "C" { // Cause of name mangling in C++, we use extern C here
     AVFormat::Init(target);
     NAVOutputFormat::Init(target);
     NAVSws::Init(target);
+    NAVResample::Init(target);
     
     // Objects only instantiable from C++
     _AVFrame::Init();

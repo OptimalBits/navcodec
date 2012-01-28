@@ -27,3 +27,4 @@
 #include "navpixformat.h"
 #include "navcodecid.h"
 #include "navsws.h"
+#include "navresample.h"
