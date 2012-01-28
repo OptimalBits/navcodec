@@ -197,6 +197,7 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
       if(finished){
         argv[0] = streamFrames[i].stream;
         argv[1] = streamFrames[i].frame;
+        streamFrames[i].pFrame->owner = pStream->codec;
         
         argv[2] = Integer::New(instance->pFormatCtx->pb->pos);        
         callback->Call(Context::GetCurrent()->Global(), 3, argv);
