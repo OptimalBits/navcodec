@@ -23,6 +23,7 @@
 #define _NAV_OUTPUT_FORMAT_H
 
 #include "avstream.h"
+#include "navaudiofifo.h"
 
 #include <v8.h>
 #include <node.h>
@@ -47,7 +48,13 @@ private:
 
   uint8_t *pAudioBuffer;
   int audioBufferSize;
+  AVStream *pAudioStream;
   
+  NAVAudioFifo *pFifo;
+  
+  int outputAudio(AVFormatContext *pFormatContext,
+                  AVStream *pStream,
+                  AVFrame *pFrame);  
 public:
   NAVOutputFormat();
   ~NAVOutputFormat();

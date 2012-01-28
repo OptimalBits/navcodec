@@ -31,8 +31,27 @@
 using namespace v8;
 
 #define VIDEO_BUFFER_SIZE 2000000
-#define AUDIO_BUFFER_SIZE 10000
+#define AUDIO_BUFFER_SIZE 128*1024
 
+void dumpFrame( AVCodecContext *pCodecContext, AVFrame *pFrame){
+  printf("pts:%i\n", pFrame->pts);
+  printf("quality:%i\n", pFrame->quality);
+  printf("type:%i\n", pFrame->type);
+  printf("nb_samples:%i\n", pFrame->nb_samples);
+  printf("format:%i\n", pFrame->format);
+  
+  printf("frame_size:%i\n", pCodecContext->frame_size);
+  
+  if(pCodecContext->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE){
+    printf("VARIABLE_FRAME_SIZE\n");
+  }
+  if(pCodecContext->codec->capabilities & CODEC_CAP_SMALL_LAST_FRAME){
+    printf("SMALL LAST FRAME\n");
+  }
+  if(pCodecContext->codec->capabilities & CODEC_CAP_DELAY){
+    printf("DELAY FRAME\n");
+  }
+}
 
 NAVOutputFormat::NAVOutputFormat(){
   pFormatCtx = NULL;
@@ -44,6 +63,10 @@ NAVOutputFormat::NAVOutputFormat(){
   
   pAudioBuffer = NULL;
   audioBufferSize = 0;
+  
+  pAudioStream = NULL;
+  
+  pFifo = NULL;
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
@@ -52,10 +75,53 @@ NAVOutputFormat::~NAVOutputFormat(){
   av_free(pFormatCtx);
   free(filename);
   
+  delete pFifo;
+    
   printf("Called NAVOutputFormat destructor");
 }
 
 Persistent<FunctionTemplate> NAVOutputFormat::templ;
+
+int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
+                                 AVStream *pStream, 
+                                 AVFrame *pFrame){
+  int gotPacket = 0, ret;
+  
+  AVCodecContext *pCodecContext = pFrame->owner;
+  
+  AVPacket packet;
+  av_init_packet(&packet);
+  
+  packet.data = pAudioBuffer;
+  packet.size = audioBufferSize;
+  
+  ret = avcodec_encode_audio2(pCodecContext, &packet, pFrame, &gotPacket);
+  if(ret<0){
+    return ret;
+  }
+  
+  if (gotPacket) {
+    packet.flags |= AV_PKT_FLAG_KEY;
+    packet.stream_index = pStream->index;
+    
+    if (packet.pts != AV_NOPTS_VALUE){
+      packet.pts = av_rescale_q(packet.pts, 
+                                pCodecContext->time_base, 
+                                pStream->time_base);
+    }
+    
+    if (packet.duration > 0){
+      packet.duration = av_rescale_q(packet.duration, 
+                                     pCodecContext->time_base, 
+                                     pStream->time_base);
+    }
+    // ret = av_write_frame(instance->pFormatCtx, &packet);
+    ret = av_interleaved_write_frame(pFormatContext, &packet);
+  }
+  
+  return ret;
+}
+
 
 void NAVOutputFormat::Init(Handle<Object> target){
   HandleScope scope;
@@ -237,16 +303,16 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   
   if(codec_type == AVMEDIA_TYPE_AUDIO){
     pCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
-
-    pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 128000);
-    
     pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
+    
+    pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 128000);
     pCodecContext->sample_rate = GET_OPTION_UINT32(options, sample_rate, 44100);
-    pCodecContext->channels = GET_OPTION_UINT32(options, channels, 2);;
+    pCodecContext->channels = GET_OPTION_UINT32(options, channels, 2);
+    
+    instance->pAudioStream = pStream;
   }
   
   // some formats want stream headers to be separate
-  
   if(instance->pFormatCtx->oformat->flags & AVFMT_GLOBALHEADER){
     pCodecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
   }
@@ -269,7 +335,6 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
    
   for(unsigned int i=0; i<instance->pFormatCtx->nb_streams;i++){
-  
     AVStream *pStream;
     AVCodec *pCodec;
     AVCodecContext *pCodecContext;
@@ -290,25 +355,35 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
       hasVideo = true;
     }
     
-    if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){
-      hasAudio = true;
+    if((pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO)&&!hasAudio){
+      hasAudio = true;  
+      instance->pFifo = new NAVAudioFifo(pCodecContext);
+      if (!instance->pFifo) {
+        return ThrowException(Exception::Error(String::New("Could not alloc audio fifo")));
+      }
     }
   }
 
   // Do Video or Audio specific initializations...
+  // Currently we assume max one stream for audio and one for video.
   if(hasVideo){
     if (!(instance->pFormatCtx->oformat->flags & AVFMT_RAWPICTURE)) {
-      if(instance->pVideoBuffer){
-        av_free(instance->pVideoBuffer);
-      }
+      av_free(instance->pVideoBuffer);
       instance->videoBufferSize = VIDEO_BUFFER_SIZE;
       instance->pVideoBuffer = (uint8_t*) av_malloc(instance->videoBufferSize);
+      if (!instance->pVideoBuffer) {
+        return ThrowException(Exception::Error(String::New("Could not alloc video buffer")));
+      }
     }
   }
   
   if(hasAudio){
     instance->audioBufferSize = AUDIO_BUFFER_SIZE;
+    av_free(instance->pAudioBuffer);
     instance->pAudioBuffer = (uint8_t*) av_malloc(instance->audioBufferSize);
+    if (!instance->pAudioBuffer) {
+      return ThrowException(Exception::Error(String::New("Could not alloc audio buffer")));
+    }
   }
   
   // --
@@ -371,37 +446,37 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
       packet.data = instance->pVideoBuffer;
       packet.size = outSize;
       
-      gotPacket = 1;
+      if (pCodecContext->coded_frame && 
+          pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
+        packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
+                                 pCodecContext->time_base, 
+                                 pStream->time_base);
+      }
+      
+      ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
+      if (ret) {
+        return ThrowException(Exception::Error(String::New("Error writing frame")));
+      }
     }
   }
   
-  if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){
-    av_init_packet(&packet);
-    
-    packet.data = instance->pAudioBuffer;
-    packet.size = instance->audioBufferSize;
-    
-    ret = avcodec_encode_audio2(pCodecContext, &packet, pFrame, &gotPacket);
+  if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){    
+    ret = instance->pFifo->put(pFrame);
     if(ret<0){
-      return ThrowException(Exception::Error(String::New("Error encoding audio frame")));
+      return ThrowException(Exception::Error(String::New("Error encoding adding frame to fifo")));
     }
     
-    packet.flags |= AV_PKT_FLAG_KEY;
-    packet.stream_index = pStream->index;
-  }
-  
-  if (pCodecContext->coded_frame && 
-      pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
-    packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
-                             pCodecContext->time_base, 
-                             pStream->time_base);
-  }
-  
-  if (gotPacket) {
-//    ret = av_write_frame(instance->pFormatCtx, &packet);
-    ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
-    if (ret) {
-      return ThrowException(Exception::Error(String::New("Error writing frame")));
+    while(instance->pFifo->moreFrames()){
+      AVFrame *pFifoFrame;
+      
+      pFifoFrame = instance->pFifo->get();
+      
+      ret = instance->outputAudio(instance->pFormatCtx, 
+                                  pStream, 
+                                  pFifoFrame);
+      if(ret<0){
+        return ThrowException(Exception::Error(String::New("Error outputing audio frame")));
+      }
     }
   }
   
@@ -414,11 +489,23 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   Local<Object> self = args.This();
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
+
+  if(instance->pFifo->dataLeft()){
+    AVFrame *pFifoFrame;
+    
+    pFifoFrame = instance->pFifo->getLast();
+    dumpFrame(pFifoFrame->owner, pFifoFrame);
+    
+    if(pFifoFrame->owner->codec->capabilities & CODEC_CAP_SMALL_LAST_FRAME){
+      int ret = instance->outputAudio(instance->pFormatCtx, 
+                                      instance->pAudioStream,
+                                      pFifoFrame);
+      if(ret<0){
+        return ThrowException(Exception::Error(String::New("Error outputing audio frame")));
+      }
+    }
+  }
   
-  // write the trailer, if any.  the trailer must be written
-  // before you close the CodecContexts open when you wrote the
-  // header; otherwise write_trailer may try to use memory that
-  // was freed on av_codec_close()
   av_write_trailer(instance->pFormatCtx);
   
   Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
