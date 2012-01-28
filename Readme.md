@@ -77,9 +77,9 @@ Compiling libavcodec
 - Download the latest stable 0.8 release from [libav.org](http://libav.org/download.html#release_0.8)
 
 - Uncompress the tarball, Ex:
-  
-	tar -xvf libav-0.8.tar.gz
-	cd libav-0.8
+
+    tar -xvf libav-0.8.tar.gz
+    cd libav-0.8
   
 - Configure your makefile, example:
 
@@ -95,7 +95,6 @@ you can get a list of other configuration options using:
   
 - Install
 
-
 		make install
 
 References
@@ -103,11 +102,13 @@ References
 
 [Ubuntu HOWTO: Install and use the latest FFmpeg and x264](http://ubuntuforums.org/showthread.php?t=786095)
 
-
 Todo
--
 
 - Make Asynchronous.
+- AC35.1 to stereo transcoding.
+- Transcode one input file to multiple outputs.
+- Thumbnails generation.
+- multiple pass encoding.
 - Fix Memory Leaks.
 
 License
