@@ -57,30 +57,30 @@ Thumbnails
 
 Several outputs can be added to the media object, and when transcoding the data will be processed in parallel. This is quite convenient when generating thumbnails (which will be very cheap to generate), or if several output formats are required (will only require one decoding process of the input file):
 
-navcodec.open('myinput.mov', function(err, media){
-  if(media){
-    media.addOutput('myoutput.mp4', {
-    	width:640,
-    	height:480,
-    	audioBitrate:128000,
-    	videoBitrate:500000
-    });
+    navcodec.open('myinput.mov', function(err, media){
+      if(media){
+        media.addOutput('myoutput.mp4', {
+    	    width:640,
+    	    height:480,
+    	    audioBitrate:128000,
+    	    videoBitrate:500000
+        });
     
-    media.addOutput('thumbnail.mp4', {
-    	width:80,
-    	height:60,
-    	skipAudio:true,
-    	videoBitrate:50000
-    });
+        media.addOutput('thumbnail.mp4', {
+    	    width:80,
+    	    height:60,
+    	    skipAudio:true,
+    	    videoBitrate:50000
+        });
     
-    media.transcode(function(err, progress, time){
-      console.log(progress);
-      if(progress === 100){
-        console.log('total transcoding time:'+time);
+        media.transcode(function(err, progress, time){
+          console.log(progress);
+          if(progress === 100){
+            console.log('total transcoding time:'+time);
+          }
+        }
       }
-    }
-  }
-});
+    });
 
 
 Metadata
@@ -88,11 +88,11 @@ Metadata
 
 Metadata is available after opening the media file. Its just a javascript object with keys and values:
 
-navcodec.open('walk.flac', function(err, media){
-  if(media){
-    console.log(media.metadata);
-  }
-});
+    navcodec.open('walk.flac', function(err, media){
+      if(media){
+        console.log(media.metadata);
+      }
+    });
 
 The previous example would result in the following output:
 
