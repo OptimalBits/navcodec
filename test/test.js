@@ -47,14 +47,43 @@ navcodec.open(inputFile, function(err, media){
  //     audioBitrate:48000,
       //sampleRate:10000,
       channels:2,
-      audioCodec:'aac'
+      audioCodec:'aac',
+   //   skipAudio:true,
+      maxVideoFrames:20,
+      videoFrameInterval:5
     };
   
-    media.transcode('output.mp4', options, function(err, progress){
-      console.log(progress); 
-      if(progress === 1){
+    media.addOutput('output.mp4', {
+      width:640,
+      height:480,
+      videoBitrate:600000,
+      //videoCodec:'vp8',
+      keepAspectRatio:true,
+     //audioBitrate:48000,
+      //sampleRate:10000,
+      channels:2,
+      audioCodec:'aac',
+     //   skipAudio:true,
+      maxVideoFrames:20,
+      videoFrameInterval:5
+    });
+  
+    media.addOutput('thumbnail.mp4', {
+      width:160, 
+      height:120, 
+      skipAudio:true
+    });
+  
+    media.transcode(function(err, progress, time){
+      console.log("Progress:"+progress); 
+      if(progress === 100){
         // Finished! 
+        console.log(time);
       }
     });
   }
 });
+
+
+
+
