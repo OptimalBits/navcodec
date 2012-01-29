@@ -13,39 +13,51 @@ Simple example:
 	options = {
 		width:640,
 		height:480,
-		bit_rate_audio:128000,
-		bit_rate_video:500000
+		audioBitrate:128000,
+		videoBitrate:500000
 	}
-
-	navcodec.transcode('myinput.mov', 'myoutput.mp4', options, function(progress){
-		console.log(progress);
+	
+	navcodec.open('myinput.mov', function(err, media){
+	  if(media){
+	    media.addOutput('myoutput.mp4', {
+	    	width:640,
+	    	height:480,
+	    	audioBitrate:128000,
+	    	videoBitrate:500000
+	    });
+	    
+	    media.transcode(function(err, progress, time){
+	      console.log(progress);
+	      if(progress === 100){
+	        console.log('total transcoding time:'+time);
+	      }
+	    }
+	  }
 	});
 
-This will transcode myinput.mov into myoutput.mp4 according to the given options. The callback will be called with a progress variable between 0 and 1.
 
-We will be adding more options soon to allow more flexibility.
+This will transcode myinput.mov into myoutput.mp4 according to the given options. The callback will be called with a progress variable between 0 and 100.
 
 Since the transcode uses mostly *libavcodec* optimized functions, the above example will run really fast.
 
+Available options (and their defaults):
 
-The function transcode is implemented in javascript using lower level *libavcodec* functions, lets for example check how to open a media file and start decoding frames:
+    width ( input width )
+    height (input height )
+    videoBitrate (input bitrate if available, 0 otherwise)
+    videoCodec ( standard codec for current file container)
+    keepAspectRatio (true)
+    audioBitrate (input bitrate if available, 0 otherwise)
+    sampleRate (44100)
+    channels (2),
+    audioCodec (standard codec for current file container)
+    skipAudio (false)
+    skipVideo (false)
+    maxVideoFrames (inf)
+    videoFrameInterval (1)
+    
 
-		nav = require('navcodec');
-
-		inputFormat = nav.AVFormat('myinput.mp4');
-
-		inputFormat.dump();
-
-		inputFormat.decode(inputFormat.streams, function(stream, frame, pos){
-			// Do something with frame...
-
-		});
-
-As you can see, the decode function will call the callback function for every frame that it decodes from the input that is part of the given streams. In this case we used all of the streams available in the input file, but we could have just used only the audio or video stream.
-
-The frames returned by decode can be processed, for example we have the module NAVSws, used for scaling and pixel format conversion.
-
-We can also access to the encoder. 
+Several outputs can be added to the media object, and when transcoding the data will be processed in parallel. This is quite convenient when generating thumbnails (which will be very cheap to generate), or if several output formats are required (will only require one decoding process of the input file).
 
 
 Install
@@ -108,6 +120,7 @@ Todo
 - AC35.1 to stereo transcoding.
 - Transcode one input file to multiple outputs.
 - Thumbnails generation.
+- Metadata support.
 - multiple pass encoding.
 - Fix Memory Leaks.
 
