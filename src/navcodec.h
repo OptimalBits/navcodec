@@ -28,3 +28,4 @@
 #include "navcodecid.h"
 #include "navsws.h"
 #include "navresample.h"
+#include "navdictionary.h"

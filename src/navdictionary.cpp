@@ -19,46 +19,43 @@
  * IN THE SOFTWARE.
  */
 
-#include "navcodec.h"
-
-#include <v8.h>
-#include <node.h>
-
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-}
+#include "navdictionary.h"
+#include "navutils.h"
 
 using namespace v8;
 
-extern "C" { // Cause of name mangling in C++, we use extern C here
-  static void init(Handle<Object> target) {
-  
-    // Global initiallization of libavcodec.
-    av_register_all();
-    avformat_network_init();
-    
-    Handle<Array> version = Array::New(3);
-    version->Set(0, Integer::New(LIBAVFORMAT_VERSION_MAJOR));
-    version->Set(1, Integer::New(LIBAVFORMAT_VERSION_MINOR));
-    version->Set(2, Integer::New(LIBAVFORMAT_VERSION_MICRO));
-    
-    target->Set(String::NewSymbol("AVFormatVersion"), version); 
-    
-    target->Set(String::NewSymbol("PixelFormat"), CreatePixelFormatsEnum());
-    target->Set(String::NewSymbol("CodecId"), CreateCodecIdEnum());
-    
-    NAVFormat::Init(target);
-    NAVOutputFormat::Init(target);
-    NAVSws::Init(target);
-    NAVResample::Init(target);
-    
-    // Objects only instantiable from C++
-    NAVFrame::Init();
-    NAVStream::Init();    
-    NAVCodecContext::Init();
-    NAVDictionary::Init();
-  }
-  NODE_MODULE(navcodec, init);
+Persistent<ObjectTemplate> NAVDictionary::templ;
+
+NAVDictionary::NAVDictionary(){
 }
+  
+NAVDictionary::~NAVDictionary(){
+}
+  
+void NAVDictionary::Init(){
+  HandleScope scope;
+  
+  Local<ObjectTemplate> templ = ObjectTemplate::New();
+  templ = ObjectTemplate::New();
+  templ->SetInternalFieldCount(1);
+  
+  NAVDictionary::templ = Persistent<ObjectTemplate>::New(templ);
+}
+  
+Handle<Object> NAVDictionary::New(AVDictionary *pDictionary) {
+  HandleScope scope;
+  
+  NAVDictionary *instance = new NAVDictionary();
+
+  Local<Object> obj = NAVDictionary::templ->NewInstance();
+  obj->SetInternalField(0, External::New(instance));
+  
+  AVDictionaryEntry *tag = NULL;
+  while ((tag = av_dict_get(pDictionary, "", tag, AV_DICT_IGNORE_SUFFIX))){
+    SET_KEY_VALUE(obj, tag->key, String::New(tag->value));
+  }
+  
+  return scope.Close(obj);
+}
+
 
