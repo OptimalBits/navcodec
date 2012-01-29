@@ -14,6 +14,6 @@ def build(bld):
   obj.cxxflags = ["-g", "-D__STDC_CONSTANT_MACROS", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.linkflags = ["-lavcodec","-lavformat","-lswscale","-lavutil"]
   obj.target = "navcodec"
-  obj.source = ["src/navcodec.cpp", "src/navcodeccontext.cpp", "src/navframe.cpp", "src/navformat.cpp", "src/navstream.cpp", "src/navoutformat.cpp","src/navpixformat.cpp", "src/navsws.cpp", "src/navcodecid.cpp", "src/navresample.cpp", "src/navaudiofifo.cpp" ]
+  obj.source = ["src/navcodec.cpp", "src/navcodeccontext.cpp", "src/navframe.cpp", "src/navformat.cpp", "src/navstream.cpp", "src/navoutformat.cpp","src/navpixformat.cpp", "src/navsws.cpp", "src/navcodecid.cpp", "src/navresample.cpp", "src/navaudiofifo.cpp", "src/navdictionary.cpp" ]
   obj.uselib = ['libavcodec', 'libavformat', 'libswscale','-lavutil']
 
