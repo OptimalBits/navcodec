@@ -37,6 +37,7 @@ using namespace v8;
 class NAVResample : node::ObjectWrap {
 private:
   struct ReSampleContext *pContext;
+  
   AVFrame *pFrame;
   uint8_t *pAudioBuffer;
   

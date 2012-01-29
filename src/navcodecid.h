@@ -22,8 +22,6 @@
 #ifndef _NAV_CODEC_ID_H
 #define _NAV_CODEC_ID_H
 
-#include "avstream.h"
-
 #include <v8.h>
 #include <node.h>
 

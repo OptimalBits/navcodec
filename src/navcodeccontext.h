@@ -19,8 +19,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef _AVCODECCONTEXT_H
-#define _AVCODECCONTEXT_H
+#ifndef _NAVCODECCONTEXT_H
+#define _NAVCODECCONTEXT_H
 
 #include <v8.h>
 #include <node.h>
@@ -35,13 +35,13 @@ using namespace v8;
 void NoopSet(Local<String> property, Local<Value> value, 
              const AccessorInfo& info);
 
-class _AVCodecContext  {
+class NAVCodecContext  {
 private:
   AVCodecContext *pContext;
   
 public:
-  _AVCodecContext();
-  ~_AVCodecContext();
+  NAVCodecContext();
+  ~NAVCodecContext();
   
   static Persistent<ObjectTemplate> templ;
   
@@ -77,4 +77,4 @@ public:
 };
 
 
-#endif // _AVCODECCONTEXT_H
+#endif // _NAVCODECCONTEXT_H

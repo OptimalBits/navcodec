@@ -22,7 +22,7 @@
 #ifndef _NAV_OUTPUT_FORMAT_H
 #define _NAV_OUTPUT_FORMAT_H
 
-#include "avstream.h"
+#include "navstream.h"
 #include "navaudiofifo.h"
 
 #include <v8.h>

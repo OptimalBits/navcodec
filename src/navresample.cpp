@@ -20,13 +20,14 @@
  */
 #include "navresample.h"
 
-#include "avformat.h"
-#include "avframe.h"
+#include "navformat.h"
+#include "navframe.h"
 #include "navutils.h"
 
 using namespace v8;
 
-#define AUDIO_BUFFER_SIZE 32*1024
+// Proper size?
+#define AUDIO_BUFFER_SIZE 256*1024
 
 NAVResample::NAVResample(){
   pContext = NULL;
@@ -72,10 +73,10 @@ Handle<Value> NAVResample::New(const Arguments& args) {
   }
   
   Local<Object> stream = Local<Object>::Cast(args[0]);
-  AVStream *pSrcStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pSrcStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
   
   stream = Local<Object>::Cast(args[1]);
-  AVStream *pDstStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pDstStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
   
   instance->pDstStream = pDstStream;
   
@@ -135,7 +136,7 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
     return scope.Close(srcFrame); // Do we really need to close here?
   } else {
     AVFrame *pSrcFrame = 
-      ((_AVFrame*)Local<External>::Cast(srcFrame->GetInternalField(0))->Value())->pContext;
+      ((NAVFrame*)Local<External>::Cast(srcFrame->GetInternalField(0))->Value())->pContext;
   
     AVCodecContext *pCodecContext = instance->pDstStream->codec;
     
@@ -168,15 +169,14 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
                                        pCodecContext->channels, 
                                        pCodecContext->sample_fmt,
                                        instance->pAudioBuffer, 
-                                       AUDIO_BUFFER_SIZE, //size, 
+                                       size, 
                                        1);
     if(ret<0) {
       return ThrowException(Exception::TypeError(String::New("Failed filling frame")));
     }
     
-    // We could have this frame already pre-allocated and reuse it.
     instance->pFrame->owner = instance->pDstStream->codec;
-    dstFrame = _AVFrame::New(instance->pFrame);
+    dstFrame = NAVFrame::New(instance->pFrame);
     return scope.Close(dstFrame);
   }
 }

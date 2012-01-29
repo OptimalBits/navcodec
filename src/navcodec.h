@@ -19,11 +19,11 @@
  * IN THE SOFTWARE.
  */
 
-#include "avformat.h"
+#include "navformat.h"
+#include "navcodeccontext.h"
 #include "navoutformat.h"
-#include "avcodeccontext.h"
-#include "avframe.h"
-#include "avstream.h"
+#include "navframe.h"
+#include "navstream.h"
 #include "navpixformat.h"
 #include "navcodecid.h"
 #include "navsws.h"

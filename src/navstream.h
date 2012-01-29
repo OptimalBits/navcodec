@@ -19,8 +19,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef _AVSTREAM_H
-#define _AVSTREAM_H
+#ifndef _NAVSTREAM_H
+#define _NAVSTREAM_H
 
 #include <v8.h>
 #include <node.h>
@@ -32,13 +32,13 @@ extern "C" {
 
 using namespace v8;
 
-class _AVStream  {
+class NAVStream  {
 
 public:
   AVStream *pContext;
   
-  _AVStream(AVStream *pStream);
-  ~_AVStream();
+  NAVStream(AVStream *pStream);
+  ~NAVStream();
   
   static Persistent<ObjectTemplate> templ;
   
@@ -48,4 +48,4 @@ public:
   static Handle<Value> New(AVStream *pStream);
 };
 
-#endif _AVSTREAM_H
+#endif _NAVSTREAM_H

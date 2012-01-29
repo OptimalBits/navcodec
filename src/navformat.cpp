@@ -19,51 +19,51 @@
  * IN THE SOFTWARE.
  */
 
-#include "avformat.h"
-#include "avframe.h"
+#include "navformat.h"
+#include "navframe.h"
 #include "navutils.h"
 
 using namespace v8;
 
-AVFormat::AVFormat(){
+NAVFormat::NAVFormat(){
   filename = NULL;
   pFormatCtx = NULL;
 }
   
-AVFormat::~AVFormat(){
+NAVFormat::~NAVFormat(){
   avformat_close_input(&pFormatCtx);
   free(filename);
 }
 
-Persistent<FunctionTemplate> AVFormat::templ;
+Persistent<FunctionTemplate> NAVFormat::templ;
 
-void AVFormat::Init(Handle<Object> target){
+void NAVFormat::Init(Handle<Object> target){
   HandleScope scope;
     
   // Our constructor
   Local<FunctionTemplate> templ = FunctionTemplate::New(New);
     
-  AVFormat::templ = Persistent<FunctionTemplate>::New(templ);
+  NAVFormat::templ = Persistent<FunctionTemplate>::New(templ);
     
-  AVFormat::templ->InstanceTemplate()->SetInternalFieldCount(1); // 1 since this is a constructor function
-  AVFormat::templ->SetClassName(String::NewSymbol("AVFormat"));
+  NAVFormat::templ->InstanceTemplate()->SetInternalFieldCount(1); // 1 since this is a constructor function
+  NAVFormat::templ->SetClassName(String::NewSymbol("NAVFormat"));
     
-  NODE_SET_PROTOTYPE_METHOD(AVFormat::templ, "dump", Dump);
-  NODE_SET_PROTOTYPE_METHOD(AVFormat::templ, "decode", Decode);
+  NODE_SET_PROTOTYPE_METHOD(NAVFormat::templ, "dump", Dump);
+  NODE_SET_PROTOTYPE_METHOD(NAVFormat::templ, "decode", Decode);
     
   // Binding our constructor function to the target variable
-  target->Set(String::NewSymbol("AVFormat"), AVFormat::templ->GetFunction());    
+  target->Set(String::NewSymbol("NAVFormat"), NAVFormat::templ->GetFunction());    
 }
 
-Handle<Value> AVFormat::New(AVFormatContext *pContext){
+Handle<Value> NAVFormat::New(AVFormatContext *pContext){
 
   return Undefined();
 }
 
-Handle<Value> AVFormat::New(const Arguments& args) {
+Handle<Value> NAVFormat::New(const Arguments& args) {
   HandleScope scope;
     
-  AVFormat* instance = new AVFormat();
+  NAVFormat* instance = new NAVFormat();
   AVFormatContext *pFormatCtx;
     
   // Wrap our C++ object as a Javascript object
@@ -93,7 +93,7 @@ Handle<Value> AVFormat::New(const Arguments& args) {
           
     for(unsigned int i=0; i < pFormatCtx->nb_streams;i++){
       AVStream *stream = pFormatCtx->streams[i];
-      streams->Set(i, _AVStream::New(stream));
+      streams->Set(i, NAVStream::New(stream));
     }
           
     //instance->streams = scope.Close(streams); // needed?
@@ -103,7 +103,7 @@ Handle<Value> AVFormat::New(const Arguments& args) {
 }
 
 // ([streams], cb(stream, frame))
-Handle<Value> AVFormat::Decode(const Arguments& args) {
+Handle<Value> NAVFormat::Decode(const Arguments& args) {
   HandleScope scope;
   Local<Array> streams;
   Local<Function> callback;
@@ -124,7 +124,7 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
     return ThrowException(Exception::TypeError(String::New("Second parameter must be a funcion")));
   }
   
-  AVFormat* instance = UNWRAP_OBJECT(AVFormat, args);
+  NAVFormat* instance = UNWRAP_OBJECT(NAVFormat, args);
   
   streams = Local<Array>::Cast(args[0]);
   callback = Local<Function>::Cast(args[1]);
@@ -139,12 +139,12 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
     AVStream *pStream;
     
     streamFrames[i].stream = streams->Get(i)->ToObject();
-    pStream = ((_AVStream*)Local<External>::Cast(streamFrames[i].stream->GetInternalField(0))->Value())->pContext;
+    pStream = ((NAVStream*)Local<External>::Cast(streamFrames[i].stream->GetInternalField(0))->Value())->pContext;
 
     streamFrames[i].pStream = pStream;
     streamFrames[i].pFrame = avcodec_alloc_frame();
 
-    Handle<Object> frame = _AVFrame::New(streamFrames[i].pFrame);
+    Handle<Object> frame = NAVFrame::New(streamFrames[i].pFrame);
     streamFrames[i].frame = frame;
     
     AVCodecContext *pCodecCtx = streamFrames[i].pStream->codec;
@@ -226,10 +226,10 @@ Handle<Value> AVFormat::Decode(const Arguments& args) {
   return Integer::New(0);
 }
 
-Handle<Value> AVFormat::Dump(const Arguments& args) {
+Handle<Value> NAVFormat::Dump(const Arguments& args) {
   HandleScope scope;
   
-  AVFormat* instance = UNWRAP_OBJECT(AVFormat, args);
+  NAVFormat* instance = UNWRAP_OBJECT(NAVFormat, args);
     
   av_dump_format(instance->pFormatCtx, 0, instance->filename, 0);
     

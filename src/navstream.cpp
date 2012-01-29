@@ -19,32 +19,49 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef _AVFRAME_H
-#define _AVFRAME_H
-
-#include <v8.h>
-#include <node.h>
-
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-}
+#include "navstream.h"
+#include "navcodeccontext.h"
 
 using namespace v8;
 
-class _AVFrame {
+Persistent<ObjectTemplate> NAVStream::templ;
 
-public:
+NAVStream::NAVStream(AVStream *pStream){
+  this->pContext = pStream;
+}
+NAVStream::~NAVStream(){
+  av_free(this->pContext);
+}
 
-  AVFrame *pContext;
-  _AVFrame(AVFrame *pContext);
-  ~_AVFrame();
+void NAVStream::Init(){
+  HandleScope scope;
   
-  static Persistent<ObjectTemplate> templ;
+  Local<ObjectTemplate> templ = ObjectTemplate::New();
+  templ = ObjectTemplate::New();
+  templ->SetInternalFieldCount(1);
   
-  static void Init();
-  
-  static Handle<Object> New(AVFrame *pFrame);
-};
+  NAVStream::templ = Persistent<ObjectTemplate>::New(templ);
+}
 
-#endif //_AVFRAME_H
+Handle<Value> NAVStream::New(AVStream *pStream){
+  HandleScope scope;
+  
+  NAVStream *instance = new NAVStream(pStream);
+  
+  Local<Object> obj = NAVStream::templ->NewInstance();
+  obj->SetInternalField(0, External::New(instance));
+    
+  Handle<Value> codec = NAVCodecContext::New(pStream->codec);
+  
+  obj->Set(String::NewSymbol("codec"), codec);
+  
+  float duration = pStream->duration*pStream->time_base.num/
+                   (float)pStream->time_base.den;
+  
+  duration = duration < 0? -1 : duration;
+  
+  obj->Set(String::NewSymbol("duration"), Number::New(duration));
+  
+  return scope.Close(obj);
+}
+HandleScope scope;

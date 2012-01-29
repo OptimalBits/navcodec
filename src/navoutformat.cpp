@@ -24,7 +24,7 @@
 #define NDEBUG
 
 #include "navoutformat.h"
-#include "avframe.h"
+#include "navframe.h"
 
 #include "navutils.h"
 
@@ -104,7 +104,7 @@ int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
     packet.flags |= AV_PKT_FLAG_KEY;
     packet.stream_index = pStream->index;
     
-    if (packet.pts != AV_NOPTS_VALUE){
+    if (packet.pts != (unsigned) AV_NOPTS_VALUE){
       packet.pts = av_rescale_q(packet.pts, 
                                 pCodecContext->time_base, 
                                 pStream->time_base);
@@ -318,7 +318,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   }
   
   Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
-  Handle<Value> stream = _AVStream::New(pStream);
+  Handle<Value> stream = NAVStream::New(pStream);
   
   streams->Set(streams->Length(),stream);
   
@@ -401,7 +401,6 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
 
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
-  int gotPacket = 0;
   AVPacket packet;
   
   int ret = 0;
@@ -415,8 +414,8 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   Local<Object> stream = Local<Object>::Cast(args[0]);
   Local<Object> frame = Local<Object>::Cast(args[1]);
   
-  AVStream *pStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
-  AVFrame *pFrame = ((_AVFrame*)Local<External>::Cast(frame->GetInternalField(0))->Value())->pContext;
+  AVStream *pStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVFrame *pFrame = ((NAVFrame*)Local<External>::Cast(frame->GetInternalField(0))->Value())->pContext;
 
   AVCodecContext *pCodecContext = pStream->codec;
   
@@ -512,7 +511,7 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   
   for(unsigned int i=0; i<streams->Length();i++){
     Local<Object> stream = Local<Object>::Cast(streams->Get(i));
-    AVStream *pStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+    AVStream *pStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
 
     avcodec_close(pStream->codec);
     av_free(pStream->codec);

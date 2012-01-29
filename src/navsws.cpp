@@ -20,8 +20,8 @@
  */
 #include "navsws.h"
 
-#include "avformat.h"
-#include "avframe.h"
+#include "navformat.h"
+#include "navframe.h"
 #include "navutils.h"
 
 using namespace v8;
@@ -69,10 +69,10 @@ Handle<Value> NAVSws::New(const Arguments& args) {
   }
 
   Local<Object> stream = Local<Object>::Cast(args[0]);
-  AVStream *pSrcStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pSrcStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
   
   stream = Local<Object>::Cast(args[1]);
-  AVStream *pDstStream = ((_AVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pDstStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
   
   if( (pSrcStream->codec->width != pDstStream->codec->width) ||
       (pSrcStream->codec->height != pDstStream->codec->height) ||
@@ -101,14 +101,12 @@ Handle<Value> NAVSws::New(const Arguments& args) {
                                          pDstStream->codec->width, 
                                          pDstStream->codec->height);
   
-    instance->pFrameBuffer = (uint8_t*) av_malloc(frameBufferSize); // Where is this buffer freed?
+    instance->pFrameBuffer = (uint8_t*) av_mallocz(frameBufferSize); // Where is this buffer freed?
     if (!instance->pFrameBuffer ){
       av_free(instance->pFrame);
       instance->pFrame = NULL;
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame buffer")));
     }
-  
-    memset(instance->pFrameBuffer, 0, frameBufferSize);
   
     avpicture_fill((AVPicture *)instance->pFrame, 
                    instance->pFrameBuffer,
@@ -143,7 +141,7 @@ Handle<Value> NAVSws::Convert(const Arguments& args) {
   if(instance->passthrough){
     return scope.Close(srcFrame); // Do we really need to close here?
   } else {
-    AVFrame *pSrcFrame = ((_AVFrame*)Local<External>::Cast(srcFrame->GetInternalField(0))->Value())->pContext;
+    AVFrame *pSrcFrame = ((NAVFrame*)Local<External>::Cast(srcFrame->GetInternalField(0))->Value())->pContext;
   
     int ret = sws_scale(instance->pContext, 
                         pSrcFrame->data, 
@@ -156,7 +154,7 @@ Handle<Value> NAVSws::Convert(const Arguments& args) {
       return ThrowException(Exception::TypeError(String::New("Failed frame conversion")));
     }
   
-    dstFrame = _AVFrame::New(instance->pFrame);
+    dstFrame = NAVFrame::New(instance->pFrame);
     return scope.Close(dstFrame);
   }
 }

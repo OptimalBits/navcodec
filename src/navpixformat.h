@@ -22,8 +22,6 @@
 #ifndef _NAV_PIX_FORMAT_H
 #define _NAV_PIX_FORMAT_H
 
-#include "avstream.h"
-
 #include <v8.h>
 #include <node.h>
 
