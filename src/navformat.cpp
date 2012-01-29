@@ -21,6 +21,7 @@
 
 #include "navformat.h"
 #include "navframe.h"
+#include "navdictionary.h"
 #include "navutils.h"
 
 using namespace v8;
@@ -62,12 +63,13 @@ Handle<Value> NAVFormat::New(AVFormatContext *pContext){
 
 Handle<Value> NAVFormat::New(const Arguments& args) {
   HandleScope scope;
+  Local<Object> self = args.This();
     
   NAVFormat* instance = new NAVFormat();
   AVFormatContext *pFormatCtx;
     
   // Wrap our C++ object as a Javascript object
-  instance->Wrap(args.This());
+  instance->Wrap(self);
     
   instance->pFormatCtx = NULL;
     
@@ -97,9 +99,10 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
     }
           
     //instance->streams = scope.Close(streams); // needed?
-    args.This()->Set(String::NewSymbol("streams"), streams);
+    SET_KEY_VALUE(self, "streams", streams);
+    SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
   }
-  return args.This();
+  return self;
 }
 
 // ([streams], cb(stream, frame))

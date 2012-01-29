@@ -21,6 +21,8 @@
 
 #include "navstream.h"
 #include "navcodeccontext.h"
+#include "navutils.h"
+#include "navdictionary.h"
 
 using namespace v8;
 
@@ -53,14 +55,15 @@ Handle<Value> NAVStream::New(AVStream *pStream){
     
   Handle<Value> codec = NAVCodecContext::New(pStream->codec);
   
-  obj->Set(String::NewSymbol("codec"), codec);
+  SET_KEY_VALUE(obj, "codec", codec);
   
   float duration = pStream->duration*pStream->time_base.num/
                    (float)pStream->time_base.den;
   
   duration = duration < 0? -1 : duration;
   
-  obj->Set(String::NewSymbol("duration"), Number::New(duration));
+  SET_KEY_VALUE(obj, "duration", Number::New(duration));
+  SET_KEY_VALUE(obj, "metadata", NAVDictionary::New(pStream->metadata));
   
   return scope.Close(obj);
 }
