@@ -22,7 +22,7 @@ inputFile = "assets/uncharted3.mp4"
 //inputFile = "assets/surfing-PP1-on-then-off.m2t" // Audio encode error
 //inputFile = "assets/toy_plane_liftoff.avi"
 //inputFile = "assets/wide-20040607-small.avi"
-//inputFile = "assets/walk.flac"
+inputFile = "assets/walk.flac"
 
 navcodec.open(inputFile, function(err, media){
   if(err){
@@ -36,7 +36,11 @@ navcodec.open(inputFile, function(err, media){
     console.log('Bitrate:'+media.bitrate);
     console.log('Sample Rate:'+media.samplerate);
     
-    media.info();
+    console.log("Metadata:");
+    console.log(media.metadata);
+    
+    
+  //  media.info();
 
     var options = {
       width:640,
