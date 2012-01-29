@@ -489,7 +489,7 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
 
-  if(instance->pFifo->dataLeft()){
+  if((instance->pFifo) && instance->pFifo->dataLeft()){
     AVFrame *pFifoFrame;
     
     pFifoFrame = instance->pFifo->getLast();
