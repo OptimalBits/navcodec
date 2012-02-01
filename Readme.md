@@ -171,9 +171,6 @@ Todo
 
 - Make Asynchronous.
 - AC35.1 to stereo transcoding.
-- Transcode one input file to multiple outputs.
-- Thumbnails generation.
-- Metadata support.
 - multiple pass encoding.
 - Fix Memory Leaks.
 
