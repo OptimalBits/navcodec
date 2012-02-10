@@ -59,21 +59,24 @@ void NAVFormat::Init(Handle<Object> target){
 
 Handle<Value> NAVFormat::New(const Arguments& args) {
   HandleScope scope;
+  AVFormatContext *pFormatCtx;
+
+  
   Local<Object> self = args.This();
     
   NAVFormat* instance = new NAVFormat();
-  AVFormatContext *pFormatCtx;
     
   // Wrap our C++ object as a Javascript object
   instance->Wrap(self);
-    
-  instance->pFormatCtx = NULL;
-    
+        
   String::Utf8Value v8str(args[0]);
   instance->filename = (char*) malloc(strlen(*v8str)+1);
+  if(instance->filename == NULL){
+    return ThrowException(Exception::TypeError(String::New("Error allocating filename string")));
+  }
+  
   strcpy(instance->filename, *v8str);
   
-  // TODO: Thrown errors!
   int ret = avformat_open_input(&(instance->pFormatCtx), instance->filename, NULL, NULL);
   if(ret<0){
     return ThrowException(Exception::TypeError(String::New("Error Opening Intput")));
@@ -94,7 +97,6 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
       streams->Set(i, NAVStream::New(stream));
     }
           
-    //instance->streams = scope.Close(streams); // needed?
     SET_KEY_VALUE(self, "streams", streams);
     SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
   }
