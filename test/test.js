@@ -1,10 +1,16 @@
 
-navcodec = require('../');
+var navcodec = require('../'),
+      should = require('should');
 
-var inputFile;
+var inputs = ["assets/uncharted3.mp4", 
+              "assets/oceans-clip.mp4",
+              "assets/bars_100.avi",
+              "assets/coals.mov"];
+              
+var audios = ["assets/walk.flac"];
+
 //inputFile  = "../the.walking.dead.s02e07.720p.hdtv.x264-orenji.mkv"; /x
-inputFile = "assets/uncharted3.mp4"
-//inputFile = "assets/oceans-clip.mp4"
+//inputFile = 
 //inputFile = "assets/MVI_3572.AVI" // incomplete sound
 //inputFile = "assets/bars_100.avi"
 //inputFile = "assets/byger-20030708-liten.avi" // crash
@@ -22,8 +28,160 @@ inputFile = "assets/uncharted3.mp4"
 //inputFile = "assets/surfing-PP1-on-then-off.m2t" // Audio encode error
 //inputFile = "assets/toy_plane_liftoff.avi"
 //inputFile = "assets/wide-20040607-small.avi"
-inputFile = "assets/walk.flac"
+//inputFile = "assets/walk.flac"
 
+describe('Video', function(){
+	describe('open', function(){
+		it('should return a media object', function(){
+		  navcodec.open(inputs[0], function(err, media){
+		    should.not.exist(err);
+		    should.exist(media);
+		    should.exist(media.width);
+		    should.exist(media.height);
+		    should.exist(media.videoBitrate);
+		    should.exist(media.audioBitrate);
+		    should.exist(media.bitrate);
+		    should.exist(media.samplerate);
+		    should.exist(media.metadata);
+		    
+		    media = null;
+  	  });
+  	})
+	})
+	
+	describe('transcode', function(){
+	  it('should transcode to a mp4 video', function(done){
+  	  navcodec.open(inputs[0], function(err, media){
+	      should.not.exist(err);
+	      should.exist(media);
+	    
+	      var options = {
+	        width:640,
+	        height:480,
+	        videoBitrate:600000,
+	        keepAspectRatio:true,
+	        channels:2,  
+	      };
+	    
+	      media.addOutput('output.mp4', options);
+	    
+	      media.transcode(function(err, progress, time){
+	        should.not.exist(err);
+	      
+	        if(progress === 100){
+	          done();
+	        }
+	      });
+	      media = null;
+	    });
+	  });
+	});
+	
+	describe('thumbnail', function(){
+	  it('should transcode to a mp4 video and create a thumbnail', function(done){
+	    navcodec.open(inputs[1], function(err, media){
+	      should.not.exist(err);
+	      should.exist(media);
+	    
+	      var options = {
+	        width:640,
+	        height:480,
+	        videoBitrate:600000,
+	        audioBitrate:128000,
+	        keepAspectRatio:true,
+	        channels:2,  
+	      };
+	    
+	      media.addOutput('output2.mp4', options);
+	    
+	      options = {
+	        width:64,
+	        height:64,
+	        videoBitrate:100000,
+	        keepAspectRatio:true,
+	        skipAudio:true,
+	        maxVideoFrames:20,
+	        videoFrameInterval:5
+	      };
+	    
+	      media.addOutput('thumbnail.mp4', options);
+	    
+	      media.transcode(function(err, progress, time){
+	        should.not.exist(err);
+	      
+	        if(progress === 100){
+	          done();
+	        }
+	      });
+	      media = null;
+	    });
+	  });
+	});
+	
+	describe('Audio', function(){
+		it('open should return a media object', function(){
+		  navcodec.open(audios[0], function(err, media){
+		    should.not.exist(err);
+		    should.exist(media);
+		    should.exist(media.width);
+		    should.exist(media.height);
+		    should.exist(media.videoBitrate);
+		    should.exist(media.audioBitrate);
+		    should.exist(media.bitrate);
+		    should.exist(media.samplerate);
+		    should.exist(media.metadata);
+		  });
+		})
+	})
+	
+})
+	   	   
+/*
+describe('Audio', function(){
+	describe('open', function(){
+		it('should return a media object', function(){
+		  navcodec.open(audios[0], function(err, media){
+		    should.not.exist(err);
+		    should.exist(media);
+		    should.exist(media.width);
+		    should.exist(media.height);
+		    should.exist(media.videoBitrate);
+		    should.exist(media.audioBitrate);
+		    should.exist(media.bitrate);
+		    should.exist(media.samplerate);
+		    should.exist(media.metadata);
+  	  });
+  	})
+	})
+	describe('transcode', function(){
+		it('should return a media object', function(done){
+		  navcodec.open(audios[0], function(err, media){
+		    should.not.exist(err);
+		    should.exist(media);
+		    
+		    var options = {
+		      width:640,
+		      height:480,
+		      audioBitrate:64000,
+		      channels:2,  
+		    };
+		    
+		    media.addOutput('audioOut.mp4', options);
+		    
+		    media.transcode(function(err, progress, time){
+		      should.not.exist(err);
+		    
+		      if(progress === 100){
+		        done();
+		      }
+		    });
+		    
+		  });
+		})
+	})
+});
+*/    
+/*
 navcodec.open(inputFile, function(err, media){
   if(err){
     console.log(err);
@@ -87,7 +245,4 @@ navcodec.open(inputFile, function(err, media){
     });
   }
 });
-
-
-
-
+*/
