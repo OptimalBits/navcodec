@@ -32,8 +32,6 @@ NAVStream::NAVStream(AVStream *pStream){
   this->pContext = pStream;
 }
 NAVStream::~NAVStream(){
-  printf("NAVStream destructor called");
-  av_free(this->pContext);
 }
 
 void NAVStream::Init(){

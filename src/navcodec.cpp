@@ -33,6 +33,8 @@ using namespace v8;
 
 extern "C" { // Cause of name mangling in C++, we use extern C here
   static void init(Handle<Object> target) {
+    
+    setbuf(stdout, NULL);
   
     // Global initiallization of libavcodec.
     av_register_all();

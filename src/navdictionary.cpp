@@ -30,7 +30,6 @@ NAVDictionary::NAVDictionary(){
 }
   
 NAVDictionary::~NAVDictionary(){
-  printf("Called NAVDictionary destructor\n");
 }
   
 void NAVDictionary::Init(){

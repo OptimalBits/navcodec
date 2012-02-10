@@ -30,8 +30,8 @@ NAVFrame::NAVFrame(AVFrame *pFrame){
 }
   
 NAVFrame::~NAVFrame(){
-  printf("NAVFrame destructor called\n");
-  av_free(pContext);
+  printf("NAVFrame destructor\n");
+ // av_free(pContext);
 }
   
 void NAVFrame::Init(){
@@ -49,8 +49,9 @@ Handle<Object> NAVFrame::New(AVFrame *pFrame) {
   
   NAVFrame *instance = new NAVFrame(pFrame);
 
-  Local<Object> obj = NAVFrame::templ->NewInstance();
+  Handle<Object> obj = NAVFrame::templ->NewInstance();
   obj->SetInternalField(0, External::New(instance));
+  //instance->Wrap(obj);
 
   return scope.Close(obj);
 }

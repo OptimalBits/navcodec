@@ -70,12 +70,11 @@ NAVOutputFormat::NAVOutputFormat(){
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
-  printf("Called NAVOutputFormat destructor\n");
-  
+  printf("NAVOutputFormat destructor\n");
+  free(filename);
   av_free(pVideoBuffer);
   av_free(pAudioBuffer);
-  av_free(pFormatCtx);
-  free(filename);
+  avformat_free_context(pFormatCtx);
   
   delete pFifo;
 }
@@ -154,9 +153,6 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   NAVOutputFormat* instance = new NAVOutputFormat();
   instance->Wrap(self);
   
-  instance->pFormatCtx = NULL;
-  instance->pOutputFormat = NULL;
-  
   Local<Array> streams = Array::New(0);
   self->Set(String::NewSymbol("streams"), streams);
   
@@ -170,6 +166,10 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   
   String::Utf8Value v8str(args[0]);
   instance->filename = (char*) malloc(strlen(*v8str)+1);
+  if(instance->filename == NULL){
+    return ThrowException(Exception::Error(String::New("Error allocating filename string")));
+  }
+  
   strcpy(instance->filename, *v8str);
   
   if(args.Length()>1){
@@ -200,9 +200,7 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   }
   
   instance->pFormatCtx->oformat = instance->pOutputFormat;
-  
-  av_dump_format(instance->pFormatCtx, 0, instance->filename, 1);
-  
+    
   return self;
 }
 
@@ -333,7 +331,9 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   Local<Object> self = args.This();
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
-   
+  
+  av_dump_format(instance->pFormatCtx, 0, instance->filename, 1);
+  
   for(unsigned int i=0; i<instance->pFormatCtx->nb_streams;i++){
     AVStream *pStream;
     AVCodec *pCodec;
@@ -506,24 +506,11 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   }
   
   av_write_trailer(instance->pFormatCtx);
-  
-  Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
-  
-  for(unsigned int i=0; i<streams->Length();i++){
-    Local<Object> stream = Local<Object>::Cast(streams->Get(i));
-    AVStream *pStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
-
-    avcodec_close(pStream->codec);
-    av_free(pStream->codec);
-    av_free(pStream);
-  }
     
   if (!(instance->pOutputFormat->flags & AVFMT_NOFILE)) {
     avio_close(instance->pFormatCtx->pb);
   }
-  
-  av_freep(&(instance->pFormatCtx));
-  
+
   return Undefined();
 }
 

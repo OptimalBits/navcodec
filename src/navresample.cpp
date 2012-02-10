@@ -37,7 +37,9 @@ NAVResample::NAVResample(){
 }
 
 NAVResample::~NAVResample(){
-  audio_resample_close(pContext);
+  printf("NAVResample destructor\n");
+  
+  //audio_resample_close(pContext);
   av_free(pFrame);
   av_free(pAudioBuffer);
 }

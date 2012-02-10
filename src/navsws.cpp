@@ -29,10 +29,12 @@ using namespace v8;
 NAVSws::NAVSws(){
   pContext = NULL;
   pFrame = NULL;
+  pFrameBuffer = NULL;
   passthrough = true;
 }
 
 NAVSws::~NAVSws(){
+  printf("NAVSws destructor\n");
   sws_freeContext(pContext);
   av_free(pFrame);
   av_free(pFrameBuffer);
@@ -103,8 +105,7 @@ Handle<Value> NAVSws::New(const Arguments& args) {
   
     instance->pFrameBuffer = (uint8_t*) av_mallocz(frameBufferSize); // Where is this buffer freed?
     if (!instance->pFrameBuffer ){
-      av_free(instance->pFrame);
-      instance->pFrame = NULL;
+      av_freep(&(instance->pFrame));
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame buffer")));
     }
   

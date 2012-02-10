@@ -32,7 +32,7 @@ NAVFormat::NAVFormat(){
 }
   
 NAVFormat::~NAVFormat(){
-  printf("Called NAVFormat destructor\n");
+  printf("NAVFormat destructor\n");
   avformat_close_input(&pFormatCtx);
   free(filename);
 }

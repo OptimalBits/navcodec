@@ -41,6 +41,7 @@ Persistent<ObjectTemplate> NAVCodecContext::templ;
 NAVCodecContext::NAVCodecContext(){}
   
 NAVCodecContext::~NAVCodecContext(){
+  printf("NAVCodecContext destructor");
   avcodec_close(pContext);
 }
   
