@@ -32,7 +32,7 @@ extern "C" {
 
 using namespace v8;
 
-class NAVStream  {
+class NAVStream : node::ObjectWrap {
 
 public:
   AVStream *pContext;

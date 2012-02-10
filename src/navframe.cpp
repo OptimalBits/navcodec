@@ -30,6 +30,7 @@ NAVFrame::NAVFrame(AVFrame *pFrame){
 }
   
 NAVFrame::~NAVFrame(){
+  printf("NAVFrame destructor called\n");
   av_free(pContext);
 }
   

@@ -30,6 +30,7 @@ NAVDictionary::NAVDictionary(){
 }
   
 NAVDictionary::~NAVDictionary(){
+  printf("Called NAVDictionary destructor\n");
 }
   
 void NAVDictionary::Init(){
@@ -47,15 +48,13 @@ Handle<Object> NAVDictionary::New(AVDictionary *pDictionary) {
   
   NAVDictionary *instance = new NAVDictionary();
 
-  Local<Object> obj = NAVDictionary::templ->NewInstance();
-  obj->SetInternalField(0, External::New(instance));
+  Handle<Object> obj = NAVDictionary::templ->NewInstance();
+  instance->Wrap(obj);
   
   AVDictionaryEntry *tag = NULL;
   while ((tag = av_dict_get(pDictionary, "", tag, AV_DICT_IGNORE_SUFFIX))){
     SET_KEY_VALUE(obj, tag->key, String::New(tag->value));
   }
-  
-  return scope.Close(obj);
+    
+  return obj;
 }
-
-

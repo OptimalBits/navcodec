@@ -70,14 +70,14 @@ NAVOutputFormat::NAVOutputFormat(){
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
+  printf("Called NAVOutputFormat destructor\n");
+  
   av_free(pVideoBuffer);
   av_free(pAudioBuffer);
   av_free(pFormatCtx);
   free(filename);
   
   delete pFifo;
-    
-  printf("Called NAVOutputFormat destructor");
 }
 
 Persistent<FunctionTemplate> NAVOutputFormat::templ;
@@ -522,8 +522,7 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
     avio_close(instance->pFormatCtx->pb);
   }
   
-  av_free(instance->pFormatCtx);
-  instance->pFormatCtx = NULL;
+  av_freep(&(instance->pFormatCtx));
   
   return Undefined();
 }

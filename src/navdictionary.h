@@ -33,7 +33,7 @@ extern "C" {
 
 using namespace v8;
 
-class NAVDictionary {
+class NAVDictionary : node::ObjectWrap{
 
 public:
 

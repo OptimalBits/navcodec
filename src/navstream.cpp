@@ -32,6 +32,7 @@ NAVStream::NAVStream(AVStream *pStream){
   this->pContext = pStream;
 }
 NAVStream::~NAVStream(){
+  printf("NAVStream destructor called");
   av_free(this->pContext);
 }
 
@@ -50,8 +51,8 @@ Handle<Value> NAVStream::New(AVStream *pStream){
   
   NAVStream *instance = new NAVStream(pStream);
   
-  Local<Object> obj = NAVStream::templ->NewInstance();
-  obj->SetInternalField(0, External::New(instance));
+  Handle<Object> obj = NAVStream::templ->NewInstance();
+  instance->Wrap(obj);
     
   Handle<Value> codec = NAVCodecContext::New(pStream->codec);
   
@@ -65,6 +66,6 @@ Handle<Value> NAVStream::New(AVStream *pStream){
   SET_KEY_VALUE(obj, "duration", Number::New(duration));
   SET_KEY_VALUE(obj, "metadata", NAVDictionary::New(pStream->metadata));
   
-  return scope.Close(obj);
+  return obj;
 }
 HandleScope scope;

@@ -32,6 +32,7 @@ NAVFormat::NAVFormat(){
 }
   
 NAVFormat::~NAVFormat(){
+  printf("Called NAVFormat destructor\n");
   avformat_close_input(&pFormatCtx);
   free(filename);
 }
@@ -54,11 +55,6 @@ void NAVFormat::Init(Handle<Object> target){
     
   // Binding our constructor function to the target variable
   target->Set(String::NewSymbol("NAVFormat"), NAVFormat::templ->GetFunction());    
-}
-
-Handle<Value> NAVFormat::New(AVFormatContext *pContext){
-
-  return Undefined();
 }
 
 Handle<Value> NAVFormat::New(const Arguments& args) {

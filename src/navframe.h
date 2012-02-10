@@ -32,7 +32,7 @@ extern "C" {
 
 using namespace v8;
 
-class NAVFrame {
+class NAVFrame : node::ObjectWrap{
 
 public:
 

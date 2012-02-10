@@ -150,9 +150,7 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
                                      (short int*) instance->pAudioBuffer, 
                                      (short int*) pSrcFrame->data[0], 
                                      pSrcFrame->nb_samples);
-    
-    printf("Src nb_samples:%i\n", pSrcFrame->nb_samples);
-    
+        
     if(nb_samples<0) {
       return ThrowException(Exception::TypeError(String::New("Failed frame conversion")));
     }
@@ -162,9 +160,7 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
     int size = nb_samples * 
                pCodecContext->channels * 
                av_get_bytes_per_sample(pCodecContext->sample_fmt);
-    
-    printf("Dst nb_samples:%i\n", instance->pFrame->nb_samples);
-    
+        
     int ret = avcodec_fill_audio_frame(instance->pFrame, 
                                        pCodecContext->channels, 
                                        pCodecContext->sample_fmt,

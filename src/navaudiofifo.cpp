@@ -5,7 +5,7 @@
 
 int NAVAudioFifo::resetFrame(int size){
   if (pOutFrame->extended_data != pOutFrame->data){
-    av_freep(&pOutFrame->extended_data);
+    av_freep(&(pOutFrame->extended_data));
   }
   
   avcodec_get_frame_defaults(pOutFrame);
@@ -38,11 +38,14 @@ NAVAudioFifo::NAVAudioFifo(AVCodecContext *pEncoder){
   frameBytesSize = pEncoder->frame_size * pEncoder->channels * outputSampleSize;
     
   pOutFrame = avcodec_alloc_frame();
+  pOutFrame->extended_data = NULL;
     
   pFrameData = (uint8_t*) av_malloc(frameBytesSize);
 }
   
 NAVAudioFifo::~NAVAudioFifo(){
+  printf("Called NAVAudioFifo destructor");
+
   av_fifo_free(pFifo);
   
   if (pOutFrame->extended_data != pOutFrame->data){

@@ -49,18 +49,7 @@ public:
   static void Init(Handle<Object> target);
   
   static Handle<Value> New(const Arguments& args);
-  
-  static Handle<Value> New(AVFormatContext *pContext);
-  
-  /*
-   // this.title=
-   static void SetTitle(Local<String> property, Local<Value> value, const AccessorInfo& info) {
-   Gtknotify* gtknotify_instance = node::ObjectWrap::Unwrap<Gtknotify>(info.Holder());
-   v8::String::Utf8Value v8str(value);
-   gtknotify_instance->title = *v8str;
-   }
-   */
-  
+    
   // ([streams], cb(stream, frame))
   static Handle<Value> Version(const Arguments& args);
   static Handle<Value> Decode(const Arguments& args);
