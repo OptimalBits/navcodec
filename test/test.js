@@ -123,9 +123,6 @@ describe('Video', function(){
 		  navcodec.open(audios[0], function(err, media){
 		    should.not.exist(err);
 		    should.exist(media);
-		    should.exist(media.width);
-		    should.exist(media.height);
-		    should.exist(media.videoBitrate);
 		    should.exist(media.audioBitrate);
 		    should.exist(media.bitrate);
 		    should.exist(media.samplerate);
