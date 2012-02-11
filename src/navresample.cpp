@@ -39,7 +39,7 @@ NAVResample::NAVResample(){
 NAVResample::~NAVResample(){
   printf("NAVResample destructor\n");
   
-  //audio_resample_close(pContext);
+  //audio_resample_close(pContext); // Crash for some unknown reason...
   av_free(pFrame);
   av_free(pAudioBuffer);
 }
@@ -108,8 +108,9 @@ Handle<Value> NAVResample::New(const Arguments& args) {
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame")));
     }
     
-    instance->pAudioBuffer = (uint8_t*) av_malloc(AUDIO_BUFFER_SIZE);
+    instance->pAudioBuffer = (uint8_t*) av_mallocz(AUDIO_BUFFER_SIZE);
     if (!instance->pAudioBuffer){
+      av_freep(&(instance->pFrame));
       return ThrowException(Exception::TypeError(String::New("Error Allocating Audio Buffer")));
     }
     
