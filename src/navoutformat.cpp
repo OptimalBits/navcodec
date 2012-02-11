@@ -74,6 +74,7 @@ NAVOutputFormat::~NAVOutputFormat(){
   free(filename);
   av_free(pVideoBuffer);
   av_free(pAudioBuffer);
+  
   avformat_free_context(pFormatCtx);
   
   delete pFifo;
@@ -507,10 +508,11 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   
   av_write_trailer(instance->pFormatCtx);
     
+  avio_flush(instance->pFormatCtx->pb);
   if (!(instance->pOutputFormat->flags & AVFMT_NOFILE)) {
     avio_close(instance->pFormatCtx->pb);
   }
-
+  
   return Undefined();
 }
 
