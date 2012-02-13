@@ -57,3 +57,33 @@ Handle<Object> NAVDictionary::New(AVDictionary *pDictionary) {
     
   return obj;
 }
+
+AVDictionary *NAVDictionary::New(Handle<Object> obj){
+  HandleScope scope;
+  
+  AVDictionary *pDict = NULL;
+
+  Local<Array> properties = obj->GetOwnPropertyNames();
+  unsigned int length = properties->Length();
+  for(unsigned int i=0; i<length; i++){
+    Local<Value> key = properties->Get(Integer::New(i));
+    Local<Value> value = obj->Get(key);
+    // value->ToString();
+    String::Utf8Value utf8Key(key);
+    String::Utf8Value utf8Value(value);
+    av_dict_set(&pDict, *utf8Key, *utf8Value, 0);
+  }
+  return pDict;
+}
+
+void NAVDictionary::Info(AVDictionary *pDictionary) {
+  if(pDictionary){
+    AVDictionaryEntry *tag = NULL;
+    while ((tag = av_dict_get(pDictionary, "", tag, AV_DICT_IGNORE_SUFFIX))){
+      printf("Key: %s, Value: %s\n", tag->key, tag->value);
+    }
+  }
+}
+
+
+

@@ -34,7 +34,6 @@ extern "C" {
 using namespace v8;
 
 class NAVDictionary : node::ObjectWrap{
-
 public:
 
   NAVDictionary();
@@ -43,8 +42,9 @@ public:
   static Persistent<ObjectTemplate> templ;
   
   static void Init();
-  
   static Handle<Object> New(AVDictionary *pDictionary);
+  static AVDictionary *New(Handle<Object> obj);
+  static void Info(AVDictionary *pDictionary);
 };
 
 #endif //_NAVDICTIONARY_H
