@@ -136,7 +136,7 @@ When the libavcodec dependencies are fulfilled, just use npm to install the pack
 
 
   
-Compiling libavcodec
+Compiling libavcodec (Recommended)
 -
 
 - Download the latest stable 0.8 release from [libav.org](http://libav.org/download.html#release_0.8)
@@ -148,7 +148,13 @@ Compiling libavcodec
   
 - Configure your makefile, example:
 
-		./configure  --prefix=/usr/local --enable-shared --enable-gpl --enable-version3 --enable-nonfree --enable-hardcoded-tables --cc=/usr/bin/clang --enable-libfaac --enable-libmp3lame --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libxvid
+		./configure  --prefix=/usr/local --enable-shared --enable-gpl --enable-version3 --enable-nonfree --enable-hardcoded-tables --cc=/usr/bin/clang --enable-libfaac --enable-libmp3lame --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libxvid --enable-libx264
+		
+You may want to add some hardware acceleration flags for your architecture, for example:
+
+    --enable-vda  (Mac OS)
+    --enable-vaapi (Linux/Unix Intel)
+    --enable-vdpau (Linux/Unix Nvidia)
   
 you can get a list of other configuration options using:
 
