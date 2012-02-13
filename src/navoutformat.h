@@ -52,9 +52,11 @@ private:
   
   NAVAudioFifo *pFifo;
   
+  uint64_t videoFrame;
+
   int outputAudio(AVFormatContext *pFormatContext,
                   AVStream *pStream,
-                  AVFrame *pFrame);  
+                  AVFrame *pFrame);
 public:
   NAVOutputFormat();
   ~NAVOutputFormat();

@@ -25,7 +25,7 @@
 
 #include "navoutformat.h"
 #include "navframe.h"
-
+#include "navdictionary.h"
 #include "navutils.h"
 
 using namespace v8;
@@ -67,6 +67,8 @@ NAVOutputFormat::NAVOutputFormat(){
   pAudioStream = NULL;
   
   pFifo = NULL;
+  
+  videoFrame = 0;
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
@@ -76,7 +78,7 @@ NAVOutputFormat::~NAVOutputFormat(){
   av_free(pAudioBuffer);
   
   avformat_free_context(pFormatCtx);
-  
+    
   delete pFifo;
 }
 
@@ -104,7 +106,7 @@ int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
     packet.flags |= AV_PKT_FLAG_KEY;
     packet.stream_index = pStream->index;
     
-    if (packet.pts != (unsigned) AV_NOPTS_VALUE){
+    if (packet.pts != AV_NOPTS_VALUE){
       packet.pts = av_rescale_q(packet.pts, 
                                 pCodecContext->time_base, 
                                 pStream->time_base);
@@ -121,7 +123,6 @@ int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
   
   return ret;
 }
-
 
 void NAVOutputFormat::Init(Handle<Object> target){
   HandleScope scope;
@@ -205,7 +206,7 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   return self;
 }
 
-// (stream_type, [codecId])
+// (stream_type, [options])
 Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   HandleScope scope;
   
@@ -225,8 +226,16 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     return ThrowException(Exception::TypeError(String::New("Input parameter #0 should be a string")));
   }
 
-  String::Utf8Value v8streamType(args[0]);
+  options = Object::New();
+  if (args.Length()>1){
+    if(args[1]->IsObject()) {
+      options = (Local<Object>::Cast(args[1]))->Clone();
+    }else {
+      return ThrowException(Exception::TypeError(String::New("Input parameter #1 should be an object")));
+    }
+  }
   
+  String::Utf8Value v8streamType(args[0]);
   if(strcmp(*v8streamType, "Video") == 0){
     codec_type = AVMEDIA_TYPE_VIDEO;
     codec_id = instance->pOutputFormat->video_codec;
@@ -234,80 +243,29 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     codec_type = AVMEDIA_TYPE_AUDIO;
     codec_id = instance->pOutputFormat->audio_codec;
   }
-
-  options = Object::New();
-  if (args.Length()>1){
-    if(args[1]->IsObject()) {
-      options = Local<Object>::Cast(args[1]);
-    }else {
-      return ThrowException(Exception::TypeError(String::New("Input parameter #1 should be an object")));
-    }
+  
+  codec_id = (CodecID) GET_OPTION_UINT32(options, codec, codec_id);
+  
+  AVCodec* pCodec = avcodec_find_encoder(codec_id);
+  if (!pCodec) {
+    return ThrowException(Exception::Error(String::New("Could not find codec")));
   }
 
-  AVCodecContext *pCodecContext;
-  AVStream *pStream;
-  
-  pStream = avformat_new_stream(instance->pFormatCtx, NULL);
+  AVStream *pStream = avformat_new_stream(instance->pFormatCtx, pCodec);
   if (!pStream) {
     return ThrowException(Exception::Error(String::New("Could not create stream")));
   }
+  AVCodecContext *pCodecContext = pStream->codec;
+    
+  pCodecContext->pix_fmt = (PixelFormat) (GET_OPTION_UINT32(options, pix_fmt, PIX_FMT_YUV420P));
+    
+  // TODO: Force dims to multiple of 2! (or maybe even 16) (or just give an error).
+  pCodecContext->width = GET_OPTION_UINT32(options, width, 480);
+  pCodecContext->height = GET_OPTION_UINT32(options, height, 270); 
   
-  pCodecContext = pStream->codec;  
-  
-  pCodecContext->codec_id = (CodecID) GET_OPTION_UINT32(options, codec, codec_id);
-  
-  if(codec_type == AVMEDIA_TYPE_VIDEO){
-    pCodecContext->codec_type = AVMEDIA_TYPE_VIDEO;
-        
-    pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 400000);
-    
-    // TODO: Force dims to multiple of 2! (or maybe even 16) (or just give an error).
-    pCodecContext->width = GET_OPTION_UINT32(options, width, 480);
-    pCodecContext->height = GET_OPTION_UINT32(options, height, 270);
-    
-    // time base: this is the fundamental unit of time (in seconds) in terms
-    // of which frame timestamps are represented. for fixed-fps content,
-    // timebase should be 1/framerate and timestamp increments should be
-    // identically 1.
-    
-    if(options->Has(String::New("time_base"))){
-      Local<Object> timeBase = 
-        Local<Object>::Cast(options->Get(String::New("time_base")));
-      
-      pCodecContext->time_base.num = GET_OPTION_UINT32(timeBase, num, 1);
-      pCodecContext->time_base.den = GET_OPTION_UINT32(timeBase, den, 25);
-    }else {
-      pCodecContext->time_base.num = 1;
-      pCodecContext->time_base.den = GET_OPTION_UINT32(options, framerate, 25);
-    }
-
-    pCodecContext->ticks_per_frame = GET_OPTION_UINT32(options, ticks_per_frame, 1);
-    
-    // emit one intra frame every gop_size frames at most
-    pCodecContext->gop_size = GET_OPTION_UINT32(options, gop_size, 12);
-    
-    pCodecContext->pix_fmt = (PixelFormat) (GET_OPTION_UINT32(options, pix_fmt, PIX_FMT_YUV420P));
-    
-    if (pCodecContext->codec_id == CODEC_ID_MPEG2VIDEO) {
-      // just for testing, we also add B frames
-      pCodecContext->max_b_frames = 2;
-    }
-    if (pCodecContext->codec_id == CODEC_ID_MPEG1VIDEO){
-      // Needed to avoid using macroblocks in which some coeffs overflow.
-      // This does not happen with normal video, it just happens here as
-      // the motion of the chroma plane does not match the luma plane.
-      pCodecContext->mb_decision=2;
-    }
-   }
+  pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
   
   if(codec_type == AVMEDIA_TYPE_AUDIO){
-    pCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
-    pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
-    
-    pCodecContext->bit_rate = GET_OPTION_UINT32(options, bit_rate, 128000);
-    pCodecContext->sample_rate = GET_OPTION_UINT32(options, sample_rate, 44100);
-    pCodecContext->channels = GET_OPTION_UINT32(options, channels, 2);
-    
     instance->pAudioStream = pStream;
   }
   
@@ -316,12 +274,19 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     pCodecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
   }
   
+  AVDictionary *pDict = NAVDictionary::New(options);
+  NAVDictionary::Info(pDict);
+  if (avcodec_open2(pCodecContext, pCodec, &pDict) < 0) {
+    NAVDictionary::Info(pDict);
+    return ThrowException(Exception::Error(String::New("Could not open codec")));
+  }
+  av_dict_free(&pDict);
+  
   Local<Array> streams = Local<Array>::Cast(self->Get(String::New("streams")));
   Handle<Value> stream = NAVStream::New(pStream);
-  
-  streams->Set(streams->Length(),stream);
-  
-  return stream;
+  streams->Set(streams->Length(), stream);
+    
+  return scope.Close(stream);
 }
 
 Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
@@ -329,28 +294,13 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   bool hasVideo = false;
   bool hasAudio = false;
   
-  Local<Object> self = args.This();
-  
+  Local<Object> self = args.This();  
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
   
   av_dump_format(instance->pFormatCtx, 0, instance->filename, 1);
   
   for(unsigned int i=0; i<instance->pFormatCtx->nb_streams;i++){
-    AVStream *pStream;
-    AVCodec *pCodec;
-    AVCodecContext *pCodecContext;
-  
-    pStream = instance->pFormatCtx->streams[i];
-    pCodecContext = pStream->codec;
-    
-    pCodec = avcodec_find_encoder(pCodecContext->codec_id);
-    if (!pCodec) {
-      return ThrowException(Exception::Error(String::New("Could not find codec")));
-    }
-  
-    if (avcodec_open2(pCodecContext, pCodec, NULL) < 0) {
-      return ThrowException(Exception::Error(String::New("Could not open codec")));
-    }
+    AVCodecContext *pCodecContext = instance->pFormatCtx->streams[i]->codec;
     
     if(pCodecContext->codec_type == AVMEDIA_TYPE_VIDEO){
       hasVideo = true;
@@ -415,8 +365,8 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   Local<Object> stream = Local<Object>::Cast(args[0]);
   Local<Object> frame = Local<Object>::Cast(args[1]);
   
-  AVStream *pStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
-  AVFrame *pFrame = ((NAVFrame*)Local<External>::Cast(frame->GetInternalField(0))->Value())->pContext;
+  AVStream *pStream = node::ObjectWrap::Unwrap<NAVStream>(stream)->pContext;  
+  AVFrame *pFrame = (node::ObjectWrap::Unwrap<NAVFrame>(frame))->pContext;
 
   AVCodecContext *pCodecContext = pStream->codec;
   
@@ -426,6 +376,9 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   }
   
   if(pCodecContext->codec_type == AVMEDIA_TYPE_VIDEO){
+    pFrame->pts = instance->videoFrame;
+    instance->videoFrame++;
+    
     int outSize = avcodec_encode_video(pCodecContext, 
                                        instance->pVideoBuffer, 
                                        instance->videoBufferSize, 
@@ -447,15 +400,15 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
       packet.size = outSize;
       
       if (pCodecContext->coded_frame && 
-          pCodecContext->coded_frame->pts != (int)AV_NOPTS_VALUE){
-        packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
-                                 pCodecContext->time_base, 
-                                 pStream->time_base);
+          pCodecContext->coded_frame->pts != AV_NOPTS_VALUE){
+            packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
+                                     pCodecContext->time_base, 
+                                     pStream->time_base);
       }
       
       ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
       if (ret) {
-        return ThrowException(Exception::Error(String::New("Error writing frame")));
+        return ThrowException(Exception::Error(String::New("Error writing video frame")));
       }
     }
   }
