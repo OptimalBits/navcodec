@@ -39,9 +39,10 @@ NAVResample::NAVResample(){
 NAVResample::~NAVResample(){
   printf("NAVResample destructor\n");
   
-  //audio_resample_close(pContext); // Crash for some unknown reason...
-  av_free(pFrame);
+  audio_resample_close(pContext); // Crash for some unknown reason...
   av_free(pAudioBuffer);
+  
+  frame.Dispose();
 }
 
 Persistent<FunctionTemplate> NAVResample::templ;
@@ -65,31 +66,27 @@ void NAVResample::Init(Handle<Object> target){
 // (srcStream, dstStream, [options])
 Handle<Value> NAVResample::New(const Arguments& args) {
   HandleScope scope;
+  Local<Object> self = args.This();
   
   NAVResample* instance = new NAVResample();
   
-  instance->Wrap(args.This());
+  instance->Wrap(self);
   
   if(args.Length()<2){
     return ThrowException(Exception::TypeError(String::New("Missing input parameters (srcStream, dstStream)")));
   }
   
   Local<Object> stream = Local<Object>::Cast(args[0]);
-  AVStream *pSrcStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pSrcStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
   
   stream = Local<Object>::Cast(args[1]);
-  AVStream *pDstStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
-  
+  AVStream *pDstStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
+
   instance->pDstStream = pDstStream;
   
   AVCodecContext *pSrcCodec = pSrcStream->codec;
   AVCodecContext *pDstCodec = pDstStream->codec;
   
-  printf("Channels %i %i\n", pSrcCodec->channels, pDstCodec->channels);
-  printf("Sample Rate %i %i\n", pSrcCodec->sample_rate, pDstCodec->sample_rate);
-  printf("Format %i %i\n", pSrcCodec->sample_fmt, pDstCodec->sample_fmt);
-  printf("Bitrate %i %i\n", pSrcCodec->bit_rate, pDstCodec->bit_rate);
-
   if((pSrcCodec->channels != pDstCodec->channels) ||
      (pSrcCodec->sample_rate != pDstCodec->sample_rate) ||
      (pSrcCodec->sample_fmt != pDstCodec->sample_fmt) || // Sample format is irrelevant or not?
@@ -114,10 +111,11 @@ Handle<Value> NAVResample::New(const Arguments& args) {
       return ThrowException(Exception::TypeError(String::New("Error Allocating Audio Buffer")));
     }
     
+    instance->frame = Persistent<Object>::New(NAVFrame::New(instance->pFrame));
+    
     instance->passthrough = false;
   }
-  
-  return args.This();
+  return self;
 }
 
 // ([streams], cb(stream, frame))
@@ -136,10 +134,9 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
   // TODO: check that src frame is really compatible with this converter.
   
   if(instance->passthrough){
-    return scope.Close(srcFrame); // Do we really need to close here?
+    return srcFrame;
   } else {
-    AVFrame *pSrcFrame = 
-      ((NAVFrame*)Local<External>::Cast(srcFrame->GetInternalField(0))->Value())->pContext;
+    AVFrame *pSrcFrame = (node::ObjectWrap::Unwrap<NAVFrame>(srcFrame))->pContext;
   
     AVCodecContext *pCodecContext = instance->pDstStream->codec;
     
@@ -175,8 +172,7 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
     }
     
     instance->pFrame->owner = instance->pDstStream->codec;
-    dstFrame = NAVFrame::New(instance->pFrame);
-    return scope.Close(dstFrame);
+    return instance->frame;
   }
 }
 

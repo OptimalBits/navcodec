@@ -37,6 +37,8 @@ using namespace v8;
 class NAVSws : node::ObjectWrap {
 private:
   struct SwsContext *pContext;
+  
+  Persistent<Object> frame;
   AVFrame *pFrame;
   uint8_t *pFrameBuffer;
   bool passthrough;

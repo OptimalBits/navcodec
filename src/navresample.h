@@ -39,6 +39,9 @@ private:
   struct ReSampleContext *pContext;
   
   AVFrame *pFrame;
+  
+  Persistent<Object> frame;
+
   uint8_t *pAudioBuffer;
   
   bool passthrough;

@@ -36,8 +36,9 @@ NAVSws::NAVSws(){
 NAVSws::~NAVSws(){
   printf("NAVSws destructor\n");
   sws_freeContext(pContext);
-  av_free(pFrame);
   av_free(pFrameBuffer);
+  
+  frame.Dispose();
 }
 
 Persistent<FunctionTemplate> NAVSws::templ;
@@ -71,10 +72,10 @@ Handle<Value> NAVSws::New(const Arguments& args) {
   }
 
   Local<Object> stream = Local<Object>::Cast(args[0]);
-  AVStream *pSrcStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pSrcStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
   
   stream = Local<Object>::Cast(args[1]);
-  AVStream *pDstStream = ((NAVStream*)Local<External>::Cast(stream->GetInternalField(0))->Value())->pContext;
+  AVStream *pDstStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
   
   if( (pSrcStream->codec->width != pDstStream->codec->width) ||
       (pSrcStream->codec->height != pDstStream->codec->height) ||
@@ -103,7 +104,7 @@ Handle<Value> NAVSws::New(const Arguments& args) {
                                          pDstStream->codec->width, 
                                          pDstStream->codec->height);
   
-    instance->pFrameBuffer = (uint8_t*) av_mallocz(frameBufferSize); // Where is this buffer freed?
+    instance->pFrameBuffer = (uint8_t*) av_mallocz(frameBufferSize);
     if (!instance->pFrameBuffer ){
       av_freep(&(instance->pFrame));
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame buffer")));
@@ -118,6 +119,8 @@ Handle<Value> NAVSws::New(const Arguments& args) {
     instance->pFrame->width = pDstStream->codec->width;
     instance->pFrame->height = pDstStream->codec->height;
 
+    instance->frame = Persistent<Object>::New(NAVFrame::New(instance->pFrame));
+    
     instance->passthrough = false;
   }
   
@@ -128,7 +131,6 @@ Handle<Value> NAVSws::New(const Arguments& args) {
 Handle<Value> NAVSws::Convert(const Arguments& args) {
   HandleScope scope;
   Local<Object> srcFrame;
-  Handle<Object> dstFrame;
   
   if(args.Length()<1){
     return ThrowException(Exception::TypeError(String::New("Missing input parameters (srcFrame)")));
@@ -140,10 +142,10 @@ Handle<Value> NAVSws::Convert(const Arguments& args) {
   // TODO: check that src frame is really compatible with this converter.
   
   if(instance->passthrough){
-    return scope.Close(srcFrame); // Do we really need to close here?
+    return srcFrame;
   } else {
-    AVFrame *pSrcFrame = ((NAVFrame*)Local<External>::Cast(srcFrame->GetInternalField(0))->Value())->pContext;
-  
+    AVFrame *pSrcFrame = (node::ObjectWrap::Unwrap<NAVFrame>(srcFrame))->pContext;
+    
     int ret = sws_scale(instance->pContext, 
                         pSrcFrame->data, 
                         pSrcFrame->linesize, 
@@ -155,8 +157,8 @@ Handle<Value> NAVSws::Convert(const Arguments& args) {
       return ThrowException(Exception::TypeError(String::New("Failed frame conversion")));
     }
   
-    dstFrame = NAVFrame::New(instance->pFrame);
-    return scope.Close(dstFrame);
+    instance->pFrame->pts = pSrcFrame->pts;
+    return instance->frame;
   }
 }
 
