@@ -60,7 +60,6 @@ void NAVFormat::Init(Handle<Object> target){
 Handle<Value> NAVFormat::New(const Arguments& args) {
   HandleScope scope;
   AVFormatContext *pFormatCtx;
-
   
   Local<Object> self = args.This();
     
@@ -142,8 +141,8 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
     AVStream *pStream;
     
     streamFrames[i].stream = streams->Get(i)->ToObject();
-    pStream = ((NAVStream*)Local<External>::Cast(streamFrames[i].stream->GetInternalField(0))->Value())->pContext;
-
+    pStream = node::ObjectWrap::Unwrap<NAVStream>(streamFrames[i].stream)->pContext;
+    
     streamFrames[i].pStream = pStream;
     streamFrames[i].pFrame = avcodec_alloc_frame();
 
@@ -201,8 +200,9 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
         argv[0] = streamFrames[i].stream;
         argv[1] = streamFrames[i].frame;
         streamFrames[i].pFrame->owner = pStream->codec;
+        //pFrame->pts = packet.pts;
         
-        argv[2] = Integer::New(instance->pFormatCtx->pb->pos);        
+        argv[2] = Integer::New(instance->pFormatCtx->pb->pos);  
         callback->Call(Context::GetCurrent()->Global(), 3, argv);
       }
     }
@@ -222,7 +222,6 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
   
   // Clean up
   for(unsigned int i=0;i<streams->Length(); i++){
-    av_free(streamFrames[i].pFrame);
     avcodec_close(streamFrames[i].pStream->codec);
   }
 
