@@ -347,9 +347,53 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   return Undefined();
 }
 
+Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, 
+                                                AVFrame *pFrame,
+                                                int *outSize){
+  int ret;
+  AVCodecContext *pContext = pStream->codec;
+  
+  if(pFrame){
+    pFrame->pts = videoFrame;
+    videoFrame++;
+  }
+  
+  *outSize = avcodec_encode_video(pContext, pVideoBuffer, videoBufferSize, pFrame);
+  
+  if(*outSize < 0){
+    return ThrowException(Exception::Error(String::New("Error encoding frame")));
+  }
+  
+  if (*outSize > 0) {
+    AVPacket packet;
+    av_init_packet(&packet);
+      
+    if(pContext->coded_frame->key_frame){
+      packet.flags |= AV_PKT_FLAG_KEY;
+    }
+      
+    packet.stream_index = pStream->index;
+    packet.data = pVideoBuffer;
+    packet.size = *outSize;
+      
+    if (pContext->coded_frame && 
+        pContext->coded_frame->pts != AV_NOPTS_VALUE){
+      packet.pts= av_rescale_q(pContext->coded_frame->pts, 
+                               pContext->time_base, 
+                               pStream->time_base);
+    }
+      
+    ret = av_interleaved_write_frame(pFormatCtx, &packet);
+    if (ret) {
+      return ThrowException(Exception::Error(String::New("Error writing video frame")));
+    }
+  }
+
+  return Undefined();
+}
+
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
-  AVPacket packet;
   
   int ret = 0;
 
@@ -373,40 +417,10 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   }
   
   if(pCodecContext->codec_type == AVMEDIA_TYPE_VIDEO){
-    pFrame->pts = instance->videoFrame;
-    instance->videoFrame++;
-    
-    int outSize = avcodec_encode_video(pCodecContext, 
-                                       instance->pVideoBuffer, 
-                                       instance->videoBufferSize, 
-                                       pFrame);
-    if(outSize < 0){
-      return ThrowException(Exception::Error(String::New("Error encoding frame")));
-    }
-  
-    // if zero size, it means the image was buffered
-    if (outSize > 0) {
-      av_init_packet(&packet);
-
-      if(pCodecContext->coded_frame->key_frame){
-        packet.flags |= AV_PKT_FLAG_KEY;
-      }
-      
-      packet.stream_index = pStream->index;
-      packet.data = instance->pVideoBuffer;
-      packet.size = outSize;
-      
-      if (pCodecContext->coded_frame && 
-          pCodecContext->coded_frame->pts != AV_NOPTS_VALUE){
-            packet.pts= av_rescale_q(pCodecContext->coded_frame->pts, 
-                                     pCodecContext->time_base, 
-                                     pStream->time_base);
-      }
-      
-      ret = av_interleaved_write_frame(instance->pFormatCtx, &packet);
-      if (ret) {
-        return ThrowException(Exception::Error(String::New("Error writing video frame")));
-      }
+    int outSize;
+    Handle<Value> result = instance->EncodeVideoFrame(pStream, pFrame, &outSize);
+    if(result->IsUndefined() != false){
+      return result;
     }
   }
   
@@ -436,10 +450,27 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
 Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   HandleScope scope;
   
+  Handle<Value> result;
+  
   Local<Object> self = args.This();
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
+   
+  for(unsigned int i=0; i<instance->pFormatCtx->nb_streams;i++){
+    AVStream *pStream = instance->pFormatCtx->streams[i];
 
+    // Flush encoders
+    if(pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO){
+      int outSize;
+      do {
+        result = instance->EncodeVideoFrame(pStream, NULL, &outSize);
+        if(outSize < 0){
+          return ThrowException(Exception::Error(String::New("Error flushing video encoder")));
+        }
+      } while (outSize > 0);
+    }
+  }
+  
   if((instance->pFifo) && instance->pFifo->dataLeft()){
     AVFrame *pFifoFrame;
     

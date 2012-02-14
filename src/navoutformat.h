@@ -52,7 +52,7 @@ private:
   
   NAVAudioFifo *pFifo;
   
-  uint64_t videoFrame;
+  int64_t videoFrame;
 
   int outputAudio(AVFormatContext *pFormatContext,
                   AVStream *pStream,
@@ -60,6 +60,10 @@ private:
 public:
   NAVOutputFormat();
   ~NAVOutputFormat();
+  
+  Handle<Value> EncodeVideoFrame(AVStream *pStream, 
+                                 AVFrame *pFrame,
+                                 int *outSize);
   
   static Persistent<FunctionTemplate> templ;
   
@@ -77,9 +81,10 @@ public:
   
   // (stream::AVStream, frame::AVFrame)
   static Handle<Value> Encode(const Arguments& args);
-  
+
   // ()
   static Handle<Value> End(const Arguments& args);
+
 };
 
 #endif // _NAV_OUTPUT_FORMAT_H
