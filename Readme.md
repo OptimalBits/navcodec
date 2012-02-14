@@ -110,7 +110,16 @@ The previous example would result in the following output:
     }
 
 
-Metadata is not normalized in any way, which means it is dependent of the input format as well as the encoding software.
+
+Optimize for Web
+-
+
+h.264 files created by libavcodec include the moov atom block at the end of the file ([Understanding the MPEG-4 movie atom](http://www.adobe.com/devnet/video/articles/mp4_movie_atom.html).
+
+navcodec provides a function called *relocateMoov* that will move the moov atom at the begining of the file, thus making it better for seeking in a web based player. Example:
+
+    navcodec.relocateMoov('myinput.mp4','myoutput.mp4');
+
 
 
 Install
@@ -174,11 +183,12 @@ References
 [Ubuntu HOWTO: Install and use the latest FFmpeg and x264](http://ubuntuforums.org/showthread.php?t=786095)
 
 Todo
+-
 
 - Make Asynchronous.
 - AC35.1 to stereo transcoding.
 - multiple pass encoding.
-- Fix Memory Leaks.
+- Add support for libavfilter.
 
 License
 -
