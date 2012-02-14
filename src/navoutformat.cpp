@@ -167,12 +167,10 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   }
   
   String::Utf8Value v8str(args[0]);
-  instance->filename = (char*) malloc(strlen(*v8str)+1);
+  instance->filename = strdup(*v8str);
   if(instance->filename == NULL){
     return ThrowException(Exception::Error(String::New("Error allocating filename string")));
   }
-  
-  strcpy(instance->filename, *v8str);
   
   if(args.Length()>1){
     if (!args[1]->IsString()){

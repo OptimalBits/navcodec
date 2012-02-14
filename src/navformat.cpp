@@ -73,13 +73,11 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
   }
   
   String::Utf8Value v8str(args[0]);
-  instance->filename = (char*) malloc(strlen(*v8str)+1);
+  instance->filename = strdup(*v8str);
   if(instance->filename == NULL){
     return ThrowException(Exception::Error(String::New("Error allocating filename string")));
   }
-  
-  strcpy(instance->filename, *v8str);
-  
+    
   int ret = avformat_open_input(&(instance->pFormatCtx), instance->filename, NULL, NULL);
   if(ret<0){
     return ThrowException(Exception::Error(String::New("Error Opening Intput")));
