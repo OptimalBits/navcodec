@@ -35,12 +35,13 @@ using namespace v8;
 void NoopSet(Local<String> property, Local<Value> value, 
              const AccessorInfo& info);
 
-class NAVCodecContext  {
+class NAVCodecContext : node::ObjectWrap {
 private:
-  AVCodecContext *pContext;
   
 public:
-  NAVCodecContext();
+  AVCodecContext *pContext;
+  
+  NAVCodecContext(AVCodecContext *pContext);
   ~NAVCodecContext();
   
   static Persistent<ObjectTemplate> templ;

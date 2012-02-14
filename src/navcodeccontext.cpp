@@ -29,8 +29,7 @@ void NoopSet(Local<String> property, Local<Value> value,
 
 AVCodecContext *GetCodecContext(const AccessorInfo& info){
   Local<Object> self = info.Holder();
-  Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
-  return (AVCodecContext*) wrap->Value();
+  return node::ObjectWrap::Unwrap<NAVCodecContext>(self)->pContext;
 }
 
 #define GET_CODEC_CONTEXT(self)\
@@ -38,11 +37,13 @@ AVCodecContext *GetCodecContext(const AccessorInfo& info){
 
 Persistent<ObjectTemplate> NAVCodecContext::templ;
 
-NAVCodecContext::NAVCodecContext(){}
+NAVCodecContext::NAVCodecContext(AVCodecContext *pContext){
+  this->pContext = pContext;
+}
   
 NAVCodecContext::~NAVCodecContext(){
   printf("NAVCodecContext destructor");
-  avcodec_close(pContext);
+ // avcodec_close(pContext);
 }
   
 void NAVCodecContext::Init(){
@@ -71,8 +72,10 @@ void NAVCodecContext::Init(){
 Handle<Object> NAVCodecContext::New(AVCodecContext *pContext) {
   HandleScope scope;
     
-  Local<Object> obj = NAVCodecContext::templ->NewInstance();
-  obj->SetInternalField(0, External::New(pContext));
+  Local<Object> obj = NAVCodecContext::templ->NewInstance();  
+  NAVCodecContext *instance = new NAVCodecContext(pContext);
+  
+  instance->Wrap(obj);
     
   NODE_SET_METHOD(obj, "open", Open);
   
@@ -91,10 +94,9 @@ Handle<Value> NAVCodecContext::Open(const Arguments& args) {
   HandleScope scope;
     
   Local<Object> self = args.This();
-    
-  Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
-  AVCodecContext *pCodecCtx = (AVCodecContext*) wrap->Value();
-    
+  
+  AVCodecContext *pCodecCtx = node::ObjectWrap::Unwrap<NAVCodecContext>(self)->pContext;
+  
   AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
   if(pCodec==NULL) {
     // Throw error!
