@@ -29,3 +29,5 @@
 #include "navsws.h"
 #include "navresample.h"
 #include "navdictionary.h"
+#include "relocatemoov.h"
+
