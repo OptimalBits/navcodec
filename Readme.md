@@ -114,7 +114,7 @@ The previous example would result in the following output:
 Optimize for Web
 -
 
-h.264 files created by libavcodec include the moov atom block at the end of the file ([Understanding the MPEG-4 movie atom](http://www.adobe.com/devnet/video/articles/mp4_movie_atom.html).
+h.264 files created by libavcodec include the moov atom block at the end of the file ([Understanding the MPEG-4 movie atom](http://www.adobe.com/devnet/video/articles/mp4_movie_atom.html)).
 
 navcodec provides a function called *relocateMoov* that will move the moov atom at the begining of the file, thus making it better for seeking in a web based player. Example:
 
