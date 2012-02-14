@@ -64,6 +64,5 @@ Handle<Value> NAVStream::New(AVStream *pStream){
   SET_KEY_VALUE(obj, "duration", Number::New(duration));
   SET_KEY_VALUE(obj, "metadata", NAVDictionary::New(pStream->metadata));
   
-  return obj;
+  return scope.Close(obj);
 }
-HandleScope scope;

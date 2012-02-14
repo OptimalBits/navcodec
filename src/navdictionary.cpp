@@ -55,7 +55,7 @@ Handle<Object> NAVDictionary::New(AVDictionary *pDictionary) {
     SET_KEY_VALUE(obj, tag->key, String::New(tag->value));
   }
     
-  return obj;
+  return scope.Close(obj);
 }
 
 AVDictionary *NAVDictionary::New(Handle<Object> obj){
