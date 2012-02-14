@@ -39,7 +39,7 @@ NAVResample::NAVResample(){
 NAVResample::~NAVResample(){
   printf("NAVResample destructor\n");
   
-  audio_resample_close(pContext); // Crash for some unknown reason...
+//  audio_resample_close(pContext); // Crash for some unknown reason...
   av_free(pAudioBuffer);
   
   frame.Dispose();
