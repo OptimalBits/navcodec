@@ -64,5 +64,14 @@ Handle<Value> NAVStream::New(AVStream *pStream){
   SET_KEY_VALUE(obj, "duration", Number::New(duration));
   SET_KEY_VALUE(obj, "metadata", NAVDictionary::New(pStream->metadata));
   
+  if(pStream->r_frame_rate.num){
+    Local<Object> frameRate = Object::New();
+  
+    SET_KEY_VALUE(frameRate, "num", Integer::New(pStream->r_frame_rate.num));
+    SET_KEY_VALUE(frameRate, "den", Integer::New(pStream->r_frame_rate.den));
+  
+    SET_KEY_VALUE(obj, "frameRate", frameRate);
+  }
+  
   return scope.Close(obj);
 }
