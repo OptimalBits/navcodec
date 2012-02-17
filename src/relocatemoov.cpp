@@ -147,7 +147,7 @@ Handle<Value> RelocateMoov(const Arguments& args) {
       free(ftyp_atom);
       ftyp_atom = (unsigned char*) malloc(ftyp_atom_size);
       if (!ftyp_atom) {
-        printf("could not allocate %"PRIu64" bytes for ftyp atom\n", atom_size);
+        printf("could not allocate %llu bytes for ftyp atom\n", atom_size);
         error = "Error allocating memory for ftyp atom";
         goto error_out;
       }
@@ -172,13 +172,6 @@ Handle<Value> RelocateMoov(const Arguments& args) {
       fseeko(infile, atom_size - ATOM_PREAMBLE_SIZE, SEEK_CUR);
     }
   }
-  printf("%c%c%c%c %10"PRIu64" %"PRIu64"\n",
-          (atom_type >> 24) & 255,
-          (atom_type >> 16) & 255,
-          (atom_type >>  8) & 255,
-          (atom_type >>  0) & 255,
-           atom_offset,
-           atom_size);
   if ((atom_type != FREE_ATOM) &&
       (atom_type != JUNK_ATOM) &&
       (atom_type != MDAT_ATOM) &&
@@ -215,7 +208,7 @@ Handle<Value> RelocateMoov(const Arguments& args) {
   moov_atom_size = atom_size;
   moov_atom      = (unsigned char*) malloc(moov_atom_size);
   if (!moov_atom) {
-    printf("could not allocate %"PRIu64" bytes for moov atom\n", atom_size);
+    printf("could not allocate %llu bytes for moov atom\n", atom_size);
     error = "Error allocating memory for moov atom";
     goto error_out;
   }
