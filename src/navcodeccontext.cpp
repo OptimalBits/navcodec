@@ -86,6 +86,7 @@ Handle<Object> NAVCodecContext::New(AVCodecContext *pContext) {
   
   SET_KEY_VALUE(obj, "time_base", timeBase);
   SET_KEY_VALUE(obj, "ticks_per_frame", Integer::New(pContext->ticks_per_frame));
+  SET_KEY_VALUE(obj, "pix_fmt", Integer::New(pContext->pix_fmt));
 
   return scope.Close(obj);
 }
