@@ -18,16 +18,41 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+#ifndef _NAVTHUMBNAIL_H
+#define _NAVTHUMBNAIL_H
 
-#include "navformat.h"
-#include "navcodeccontext.h"
-#include "navoutformat.h"
-#include "navframe.h"
-#include "navstream.h"
-#include "navpixformat.h"
-#include "navcodecid.h"
-#include "navsws.h"
-#include "navresample.h"
-#include "navdictionary.h"
-#include "navthumbnail.h"
-#include "relocatemoov.h"
+#include "navcodec.h"
+
+#include <v8.h>
+#include <node.h>
+
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+}
+
+using namespace v8;
+
+class NAVThumbnail : node::ObjectWrap {
+private:
+  AVCodecContext *pContext;
+  uint64_t bufferSize;
+  uint8_t *pBuffer;
+  
+public:
+  NAVThumbnail();
+  ~NAVThumbnail();
+  
+  static Persistent<FunctionTemplate> templ;
+  
+  static void Init(Handle<Object> target);
+  
+  // (srcStream, dstStream)
+  static Handle<Value> New(const Arguments& args);
+    
+  // (srcFrame) -> dstFrame
+  static Handle<Value> Write(const Arguments& args);
+};
+
+#endif // _NAVTHUMBNAIL_H
+
