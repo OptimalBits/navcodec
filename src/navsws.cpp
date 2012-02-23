@@ -59,34 +59,47 @@ void NAVSws::Init(Handle<Object> target){
   target->Set(String::NewSymbol("NAVSws"), NAVSws::templ->GetFunction());    
 }
 
-// (srcStream, dstStream, [options])
+// (srcStream, dstStream | options)
 Handle<Value> NAVSws::New(const Arguments& args) {
   HandleScope scope;
+  int width, height;
+  PixelFormat pix_fmt;
+  Local<Object> options;
   
   NAVSws* instance = new NAVSws();
   
   instance->Wrap(args.This());
     
   if(args.Length()<2){
-    return ThrowException(Exception::TypeError(String::New("Missing input parameters (srcStream, dstStream)")));
+    return ThrowException(Exception::TypeError(String::New("Missing input parameters (srcStream, dstStream | options)")));
   }
 
   Local<Object> stream = Local<Object>::Cast(args[0]);
   AVStream *pSrcStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
   
-  stream = Local<Object>::Cast(args[1]);
-  AVStream *pDstStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
+  Local<Object> streamOrOptions = Local<Object>::Cast(args[1]);
   
-  if( (pSrcStream->codec->width != pDstStream->codec->width) ||
-      (pSrcStream->codec->height != pDstStream->codec->height) ||
-      (pSrcStream->codec->pix_fmt != pDstStream->codec->pix_fmt) ){
+  Local<String> codecKey = String::NewSymbol("codec");
+  if(streamOrOptions->Has(codecKey)){
+    options = Local<Object>::Cast(streamOrOptions->Get(codecKey));
+  }else{
+    options = streamOrOptions;
+  }
+  
+  width = GET_OPTION_UINT32(options, width, 480);
+  height = GET_OPTION_UINT32(options, height, 480);
+  pix_fmt = (PixelFormat) GET_OPTION_UINT32(options, pix_fmt, PIX_FMT_YUV420P);
+  
+  if( (pSrcStream->codec->width != width) ||
+      (pSrcStream->codec->height != height) ||
+      (pSrcStream->codec->pix_fmt != pix_fmt) ){
   
     instance->pContext = sws_getContext(pSrcStream->codec->width, 
                                         pSrcStream->codec->height, 
                                         pSrcStream->codec->pix_fmt, 
-                                        pDstStream->codec->width,
-                                        pDstStream->codec->height,
-                                        pDstStream->codec->pix_fmt,
+                                        width,
+                                        height,
+                                        pix_fmt,
                                         SWS_BICUBIC, // -> put in options.
                                         NULL, NULL, NULL // Filters & Params (unused for now)
                                         );
@@ -100,9 +113,7 @@ Handle<Value> NAVSws::New(const Arguments& args) {
     if (!instance->pFrame){
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame")));
     }
-    frameBufferSize = avpicture_get_size(pDstStream->codec->pix_fmt, 
-                                         pDstStream->codec->width, 
-                                         pDstStream->codec->height);
+    frameBufferSize = avpicture_get_size(pix_fmt, width, height);
   
     instance->pFrameBuffer = (uint8_t*) av_mallocz(frameBufferSize);
     if (!instance->pFrameBuffer ){
@@ -110,14 +121,10 @@ Handle<Value> NAVSws::New(const Arguments& args) {
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame buffer")));
     }
   
-    avpicture_fill((AVPicture *)instance->pFrame, 
-                   instance->pFrameBuffer,
-                   pDstStream->codec->pix_fmt, 
-                   pDstStream->codec->width, 
-                   pDstStream->codec->height);
+    avpicture_fill((AVPicture *)instance->pFrame, instance->pFrameBuffer, pix_fmt, width, height);
     
-    instance->pFrame->width = pDstStream->codec->width;
-    instance->pFrame->height = pDstStream->codec->height;
+    instance->pFrame->width = width;
+    instance->pFrame->height = height;
 
     instance->frame = Persistent<Object>::New(NAVFrame::New(instance->pFrame));
     
