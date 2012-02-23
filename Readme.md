@@ -52,7 +52,7 @@ Available options (and their defaults):
     
 
 
-Thumbnails
+Multiple outputs
 -
 
 Several outputs can be added to the media object, and when transcoding the data will be processed in parallel. This is quite convenient when generating thumbnails (which will be very cheap to generate), or if several output formats are required (will only require one decoding process of the input file):
@@ -78,9 +78,32 @@ Several outputs can be added to the media object, and when transcoding the data 
           if(progress === 100){
             console.log('total transcoding time:'+time);
           }
-        }
+        });
       }
     });
+
+
+Jpeg Thumbnails
+-
+
+A very common use case is the generation of a jpeg thumbnail to represent some video sequence. This can be easily accomplished by calling the function *thumbnail*. It can be called once or several times if different options are required. See the following example, where for every generated thumbnail a time offset is choosen:
+
+    
+    navcodec.open('myinput.mov', function(err, media){
+      if(media){
+        media.thumbnail([{'first.jpg':1, 'secong.jpg:100.5'},{width:128,height:128});
+        media.thumbnail([{'first.jpg':1, 'secong.jpg:100.5'},{width:128,height:128});
+        
+        media.transcode(function(err, progress, time){
+          console.log(progress);
+          if(progress === 100){
+            console.log('total transcoding time:'+time);
+          }
+        });
+      }
+    });
+
+Note that generating thumbnails at the same time as transcoding a full video is a extreamly cheap operation.
 
 
 Metadata
