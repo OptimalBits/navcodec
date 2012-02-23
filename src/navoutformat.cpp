@@ -275,6 +275,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   AVDictionary *pDict = NAVDictionary::New(options);
   if (avcodec_open2(pCodecContext, pCodec, &pDict) < 0) {
     NAVDictionary::Info(pDict);
+    av_dict_free(&pDict);
     return ThrowException(Exception::Error(String::New("Could not open codec")));
   }
   av_dict_free(&pDict);
