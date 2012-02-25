@@ -204,6 +204,21 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   return self;
 }
 
+static PixelFormat get_pix_fmt(AVCodec *pCodec, PixelFormat pix_fmt){
+  if(pCodec->pix_fmts){
+    const PixelFormat *pFormats = pCodec->pix_fmts;
+    while(*pFormats != -1){
+      if(*pFormats == pix_fmt){
+        return pix_fmt;
+      }
+      pFormats++;
+    }
+    return pCodec->pix_fmts[0];
+  }else{
+    return pix_fmt;
+  }
+}
+
 // (stream_type, [options])
 Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   HandleScope scope;
@@ -255,8 +270,10 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   }
   AVCodecContext *pCodecContext = pStream->codec;
     
-  pCodecContext->pix_fmt = (PixelFormat) (GET_OPTION_UINT32(options, pix_fmt, PIX_FMT_YUV420P));
-    
+  PixelFormat pix_fmt = (PixelFormat) options->Get(String::NewSymbol("pix_fmt"))->Uint32Value();
+  
+  pCodecContext->pix_fmt = get_pix_fmt(pCodec, pix_fmt);
+  
   // TODO: Force dims to multiple of 2! (or maybe even 16) (or just give an error).
   pCodecContext->width = GET_OPTION_UINT32(options, width, 480);
   pCodecContext->height = GET_OPTION_UINT32(options, height, 270); 
