@@ -6,6 +6,8 @@ Node libavcodec bindings
 
 The initial priority will be to make the transcoding use case, and later move to other uses cases such as playing, filtering, editing, etc.
 
+Follow [optimalbits](http://twitter.com/optimalbits) for news and updates regarding this library.
+
 Transcoding
 -
 
