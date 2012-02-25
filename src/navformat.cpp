@@ -98,6 +98,9 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
     }
     SET_KEY_VALUE(self, "streams", streams);
     SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
+    SET_KEY_VALUE(self, "duration", Number::New(pFormatCtx->duration / (float) AV_TIME_BASE));
+    
+    
   }
   return self;
 }
