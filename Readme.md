@@ -91,8 +91,8 @@ A very common use case is the generation of a jpeg thumbnail to represent some v
     
     navcodec.open('myinput.mov', function(err, media){
       if(media){
-        media.thumbnail([{'first.jpg':1, 'secong.jpg:100.5'},{width:128,height:128});
-        media.thumbnail([{'first.jpg':1, 'secong.jpg:100.5'},{width:128,height:128});
+        media.thumbnail([{'first128.jpg':1, 'secong128.jpg:100.5'},{width:128,height:128});
+        media.thumbnail([{'first64.jpg':1, 'secong64.jpg:100.5'},{width:64,height:64});
         
         media.transcode(function(err, progress, time){
           console.log(progress);
@@ -132,7 +132,15 @@ The previous example would result in the following output:
       COMMENT: 'EAC V1.0 beta 1, Secure Mode, Test & Copy, AccurateRip, FLAC 1.2.1b -8' 
     }
 
+Besides the 'metadata' property, other convenient properties are also available in the media object:
 
+    width
+    height
+    videoBitrate
+    audioBitrate
+    bitrate
+    samplerate
+    duration
 
 Optimize for Web
 -
