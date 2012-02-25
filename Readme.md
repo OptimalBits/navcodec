@@ -151,8 +151,11 @@ h.264 files created by libavcodec include the moov atom block at the end of the 
 
 navcodec provides a function called *relocateMoov* that will move the moov atom at the begining of the file, thus making it better for seeking in a web based player. Example:
 
-    navcodec.relocateMoov('myinput.mp4','myoutput.mp4');
-
+    navcodec.relocateMoov('myinput.mp4','myoutput.mp4', function(err){
+      if(err){
+        console.log(err);
+      }
+    });
 
 
 Install
