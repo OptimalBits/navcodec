@@ -174,19 +174,22 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   
   if(args.Length()>1){
     if (!args[1]->IsString()){
+      free(instance->filename);
       return ThrowException(Exception::TypeError(String::New("Input parameter #1 should be a string")));
     }
     String::Utf8Value v8codec_name(args[1]);
-    codec_name = *v8codec_name;
+    codec_name = strdup(*v8codec_name);
   }
   if(args.Length()>2){
     if (!args[2]->IsString()){
+      free(codec_name);
+      free(instance->filename);
       return ThrowException(Exception::TypeError(String::New("Input parameter #2 should be a string")));
     }
     String::Utf8Value v8mime_type(args[2]);
-    mime_type = *v8mime_type;
+    mime_type = strdup(*v8mime_type);
   }
-  
+    
   instance->pOutputFormat = 
     av_guess_format(codec_name, instance->filename, mime_type);
   
@@ -200,6 +203,9 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   }
   
   instance->pFormatCtx->oformat = instance->pOutputFormat;
+  
+  free((void*)codec_name);
+  free((void*)mime_type);
     
   return self;
 }
