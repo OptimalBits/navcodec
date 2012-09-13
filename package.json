@@ -5,14 +5,22 @@
   "version": "0.1.5",
   "main": "./index.js",
   "scripts": {
-    "preinstall": "node-waf configure build",
-    "preuninstall": "rm -rf build/*"
+    "preinstall": "node-gyp configure build",
+    "preuninstall": "rm -rf build/*",	
+    "pretest" : "make test"
+  },
+  "repository": {
+     "type": "git",
+     "url": "git://github.com/OptimalBits/navcodec.git"
   },
   "engines": {
     "node": ">=0.6.10"
   },
   "dependencies": {
-    "underscore": "1.3.1"
+    "underscore": "*"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "mocha": "*",
+    "should": "*"
+  }
 }
