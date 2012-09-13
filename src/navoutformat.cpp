@@ -34,7 +34,7 @@ using namespace v8;
 #define AUDIO_BUFFER_SIZE 128*1024
 
 void dumpFrame( AVCodecContext *pCodecContext, AVFrame *pFrame){
-  printf("pts:%i\n", pFrame->pts);
+  printf("pts:%llu\n", pFrame->pts);
   printf("quality:%i\n", pFrame->quality);
   printf("type:%i\n", pFrame->type);
   printf("nb_samples:%i\n", pFrame->nb_samples);
@@ -106,7 +106,7 @@ int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
     packet.flags |= AV_PKT_FLAG_KEY;
     packet.stream_index = pStream->index;
     
-    if (packet.pts != AV_NOPTS_VALUE){
+    if (packet.pts != (int64_t)AV_NOPTS_VALUE){
       packet.pts = av_rescale_q(packet.pts, 
                                 pCodecContext->time_base, 
                                 pStream->time_base);
@@ -315,7 +315,6 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   bool hasVideo = false;
   bool hasAudio = false;
   
-  Local<Object> self = args.This();  
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
   
   av_dump_format(instance->pFormatCtx, 0, instance->filename, 1);
@@ -401,7 +400,7 @@ Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream,
     packet.size = *outSize;
       
     if (pContext->coded_frame && 
-        pContext->coded_frame->pts != AV_NOPTS_VALUE){
+        pContext->coded_frame->pts != (int64_t)AV_NOPTS_VALUE){
       packet.pts= av_rescale_q(pContext->coded_frame->pts, 
                                pContext->time_base, 
                                pStream->time_base);
@@ -475,9 +474,7 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   HandleScope scope;
   
   Handle<Value> result;
-  
-  Local<Object> self = args.This();
-  
+    
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
    
   for(unsigned int i=0; i<instance->pFormatCtx->nb_streams;i++){

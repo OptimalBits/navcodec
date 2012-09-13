@@ -48,4 +48,4 @@ public:
   static Handle<Value> New(AVStream *pStream);
 };
 
-#endif _NAVSTREAM_H
+#endif //_NAVSTREAM_H
