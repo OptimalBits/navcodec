@@ -182,7 +182,7 @@ Handle<Value> NAVOutputFormat::New(const Arguments& args) {
   }
   if(args.Length()>2){
     if (!args[2]->IsString()){
-      free(codec_name);
+      free((void*)codec_name);
       free(instance->filename);
       return ThrowException(Exception::TypeError(String::New("Input parameter #2 should be a string")));
     }
@@ -520,5 +520,3 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
   
   return Undefined();
 }
-
-
