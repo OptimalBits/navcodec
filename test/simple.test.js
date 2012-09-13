@@ -1,36 +1,24 @@
 
 var navcodec = require('../'),
-      should = require('should');
+      should = require('should'),
+      path = require('path'),
+      fs = require('fs');
 
-var inputs = ["assets/uncharted3.mp4", 
-              "assets/oceans-clip.mp4",
-              "assets/bars_100.avi",
-              "assets/coals.mov"];
+
+var fixtureDir = __dirname + '/fixtures';
+
+var inputs = [ fixtureDir + "/uncharted3.mp4", 
+               fixtureDir + "/oceans-clip.mp4"];
               
-var audios = ["assets/walk.flac"];
+var audios = [ fixtureDir + "/walk.flac"];
 
-//inputFile  = "../the.walking.dead.s02e07.720p.hdtv.x264-orenji.mkv"; /x
-//inputFile = 
-//inputFile = "assets/MVI_3572.AVI" // incomplete sound
-//inputFile = "assets/bars_100.avi"
-//inputFile = "assets/byger-20030708-liten.avi" // crash
-//inputFile = "assets/coals.mov"
-//inputFile = "assets/griffon-dropout.m2t" // Broken
-//inputFile = "assets/grill-mjpeg.mov" // Too fast
-//inputFile = "assets/guywmic_ntsc.mov" // Produce error.
-//inputFile = "assets/lys-20031106.avi" // crash
-//inputFile = "assets/mars-20030905.avi"
-//inputFile = "assets/morgen-20030714.avi"
-//inputFile = "assets/motion_demo4.m2v"
-// inputFile = "assets/prpol-rerender2.avi"
-// inputFile = "assets/prpol-rerender2.mov"
-//inputFile = "assets/rassegna2.avi" // error.
-//inputFile = "assets/surfing-PP1-on-then-off.m2t" // Audio encode error
-//inputFile = "assets/toy_plane_liftoff.avi"
-//inputFile = "assets/wide-20040607-small.avi"
-//inputFile = "assets/walk.flac"
+// create output directory for fixture results
+if(!path.exists(fixtureDir + "/transcode")) {
+   fs.mkdirSync(fixtureDir + "/transcode");
+}
 
 describe('Video', function(){
+
 	describe('open', function(){
 		it('should return a media object', function(){
 		  navcodec.open(inputs[0], function(err, media){
@@ -45,8 +33,8 @@ describe('Video', function(){
 		    should.exist(media.metadata);
 		    
 		    media = null;
-  	  });
-  	})
+  	  	});
+  	    })
 	})
 	
 	describe('transcode', function(){
@@ -63,7 +51,7 @@ describe('Video', function(){
 	        channels:2,  
 	      };
 	    
-	      media.addOutput('output.mp4', options);
+	      media.addOutput(fixtureDir + '/transcode/output.mp4', options);
 	    
 	      media.transcode(function(err, progress, time){
 	        should.not.exist(err);
@@ -92,7 +80,7 @@ describe('Video', function(){
 	        channels:2,  
 	      };
 	    
-	      media.addOutput('output2.mp4', options);
+	      media.addOutput(fixtureDir + '/transcode/output2.mp4', options);
 	    
 	      options = {
 	        width:64,
@@ -104,7 +92,7 @@ describe('Video', function(){
 	        videoFrameInterval:5
 	      };
 	    
-	      media.addOutput('thumbnail.mp4', options);
+	      media.addOutput(fixtureDir + '/transcode/thumbnail.mp4', options);
 	    
 	      media.transcode(function(err, progress, time){
 	        should.not.exist(err);
@@ -163,7 +151,7 @@ describe('Audio', function(){
 		      channels:2,  
 		    };
 		    
-		    media.addOutput('audioOut.mp4', options);
+		    media.addOutput(fixtureDir + '/transcode/audioOut.mp4', options);
 		    
 		    media.transcode(function(err, progress, time){
 		      should.not.exist(err);
@@ -212,7 +200,7 @@ navcodec.open(inputFile, function(err, media){
       videoFrameInterval:5
     };
   
-    media.addOutput('output.mp4', {
+    media.addOutput(fixtureDir + '/transcode/output.mp4', {
       width:640,
       height:480,
       videoBitrate:600000,
@@ -227,7 +215,7 @@ navcodec.open(inputFile, function(err, media){
       videoFrameInterval:5
     });
   
-    media.addOutput('thumbnail.mp4', {
+    media.addOutput(fixtureDir + '/transcode/thumbnail.mp4', {
       width:160, 
       height:120, 
       skipAudio:true
