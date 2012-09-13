@@ -5,8 +5,7 @@
   "version": "0.1.5",
   "main": "./index.js",
   "scripts": {
-    "preinstall": "node-gyp configure build",
-    "preuninstall": "rm -rf build/*",	
+    "preuninstall": "make clean",	
     "pretest" : "make test"
   },
   "repository": {
