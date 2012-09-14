@@ -1,5 +1,4 @@
-
-Node libavcodec bindings
+Node libavcodec bindings [![Build Status](https://secure.travis-ci.org/benvanik/node-transcoding.png)](http://travis-ci.org/benvanik/node-transcoding)
 =
 
 *navcodec* is a module that aims to provide a node wrapper for the excellent [libavcodec](http://libav.org) library. The module does not aim to make a 1 to 1 mapping between this library and javascript. Instead the aim is to create a new javascript API inspired by the underlying library that is more javascript oriented and easier to use.
