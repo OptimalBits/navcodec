@@ -1,9 +1,7 @@
 Node libavcodec bindings [![BuildStatus](https://secure.travis-ci.org/OptimalBits/navcodec.png?branch=master)](http://travis-ci.org/optimalbits/navcodec)
 =
 
-
-
-*navcodec* is a module that aims to provide a node wrapper for the excellent [libavcodec](http://libav.org) library. The module does not aim to make a 1 to 1 mapping between this library and javascript. Instead the aim is to create a new javascript API inspired by the underlying library that is more javascript oriented and easier to use.
+*navcodec* is a module that aims to provide a node wrapper for the excellent [libavcodec](http://libav.org) library. This module aims to create a new javascript API inspired by the underlying library that is more javascript oriented and easier to use.
 
 The initial priority will be to make the transcoding use case, and later move to other uses cases such as playing, filtering, editing, etc.
 
