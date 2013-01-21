@@ -1,4 +1,4 @@
-/* Copyright(c) 2012 Optimal Bits Sweden AB. All rights reserved.
+/* Copyright(c) 2012-2013 Optimal Bits Sweden AB. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,8 +26,20 @@
 
 using namespace v8;
 
-// Proper size?
-#define AUDIO_BUFFER_SIZE 256*1024
+// Cheap layout guessing
+int numChannesToLayout(int numChannels){
+  fprintf(stderr, "num channels: %i", numChannels);
+  switch(numChannels){
+    case 2: return AV_CH_LAYOUT_STEREO;
+    case 3: return AV_CH_LAYOUT_2POINT1;
+    case 4: return AV_CH_LAYOUT_3POINT1;
+    case 5: return AV_CH_LAYOUT_4POINT1;
+    case 6: return AV_CH_LAYOUT_5POINT1;
+    case 7: return AV_CH_LAYOUT_6POINT1;
+    case 8: return AV_CH_LAYOUT_7POINT1;
+  }
+  return AV_CH_LAYOUT_STEREO;
+}
 
 NAVResample::NAVResample(){
   pContext = NULL;
@@ -39,8 +51,7 @@ NAVResample::NAVResample(){
 NAVResample::~NAVResample(){
   printf("NAVResample destructor\n");
   
-//  audio_resample_close(pContext); // Crash for some unknown reason...
-  av_free(pAudioBuffer);
+  avresample_free(&pContext);
   
   frame.Dispose();
 }
@@ -82,6 +93,7 @@ Handle<Value> NAVResample::New(const Arguments& args) {
   stream = Local<Object>::Cast(args[1]);
   AVStream *pDstStream = (node::ObjectWrap::Unwrap<NAVStream>(stream))->pContext;
 
+  instance->pSrcStream = pSrcStream;
   instance->pDstStream = pDstStream;
   
   AVCodecContext *pSrcCodec = pSrcStream->codec;
@@ -90,31 +102,40 @@ Handle<Value> NAVResample::New(const Arguments& args) {
   if((pSrcCodec->channels != pDstCodec->channels) ||
      (pSrcCodec->sample_rate != pDstCodec->sample_rate) ||
      (pSrcCodec->sample_fmt != pDstCodec->sample_fmt) || // Sample format is irrelevant or not?
-     (pSrcCodec->bit_rate > pDstCodec->bit_rate)){  // Bit rate is irrelevant here.
+     (pSrcCodec->bit_rate > pDstCodec->bit_rate)){
     
-    instance->pContext = av_audio_resample_init(pDstCodec->channels, pSrcCodec->channels,
-                                                pDstCodec->sample_rate, pSrcCodec->sample_rate,
-                                                pDstCodec->sample_fmt, pSrcCodec->sample_fmt,
-                                                16, 10, 0, 0.8 );
+    instance->pContext = avresample_alloc_context();
     if(instance->pContext == NULL) {
       return ThrowException(Exception::TypeError(String::New("Could not init resample context")));
     }
-        
+  
+    {
+      AVAudioResampleContext *avr  = instance->pContext;
+      
+      // TODO: Decide Channel layout based on input and output number of channels.
+      av_opt_set_int(avr, "in_channel_layout",  numChannesToLayout(pSrcCodec->channels), 0);
+      av_opt_set_int(avr, "out_channel_layout", numChannesToLayout(pDstCodec->channels), 0);
+    
+      av_opt_set_int(avr, "in_sample_rate", pSrcCodec->sample_rate, 0);
+      av_opt_set_int(avr, "in_sample_fmt",  pSrcCodec->sample_fmt, 0);
+
+      av_opt_set_int(avr, "out_sample_rate", pDstCodec->sample_rate, 0);
+      av_opt_set_int(avr, "out_sample_fmt", pDstCodec->sample_fmt, 0);
+    
+      if(avresample_open(instance->pContext)){
+        return ThrowException(Exception::TypeError(String::New("Could not open resampler")));
+      }
+    }
+    
     instance->pFrame = avcodec_alloc_frame();
     if (!instance->pFrame){
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame")));
     }
-    
-    instance->pAudioBuffer = (uint8_t*) av_mallocz(AUDIO_BUFFER_SIZE);
-    if (!instance->pAudioBuffer){
-      av_freep(&(instance->pFrame));
-      return ThrowException(Exception::TypeError(String::New("Error Allocating Audio Buffer")));
-    }
-    
+  
     instance->frame = Persistent<Object>::New(NAVFrame::New(instance->pFrame));
-    
     instance->passthrough = false;
   }
+  
   return self;
 }
 
@@ -130,9 +151,7 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
   srcFrame = Local<Array>::Cast(args[0]);
   
   NAVResample* instance = UNWRAP_OBJECT(NAVResample, args);
-  
-  // TODO: check that src frame is really compatible with this converter.
-  
+    
   if(instance->passthrough){
     return srcFrame;
   } else {
@@ -144,35 +163,96 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
     
     instance->pFrame->quality = 1;
     instance->pFrame->pts = pSrcFrame->pts;
-    instance->pFrame->format = AV_SAMPLE_FMT_S16;
-    
-    int nb_samples = audio_resample (instance->pContext, 
-                                     (short int*) instance->pAudioBuffer, 
-                                     (short int*) pSrcFrame->data[0], 
-                                     pSrcFrame->nb_samples);
+    //instance->pFrame->format = AV_SAMPLE_FMT_S16; // needed?
         
-    if(nb_samples<0) {
-      return ThrowException(Exception::TypeError(String::New("Failed frame conversion")));
+    {
+      AVAudioResampleContext *avr  = instance->pContext;
+      
+      uint8_t *output;
+      int out_linesize;
+      
+      int nb_samples = avresample_available(avr) +
+                       av_rescale_rnd(avresample_get_delay(avr) +
+                                      pSrcFrame->nb_samples,
+                                      pCodecContext->sample_rate,
+                                      instance->pSrcStream->codec->sample_rate,
+                                      AV_ROUND_UP);
+      av_samples_alloc(&output,
+                       &out_linesize,
+                       pCodecContext->channels,
+                       nb_samples,
+                       pCodecContext->sample_fmt,
+                       0);
+      if(output == NULL) {
+        return ThrowException(Exception::TypeError(String::New("Failed allocating output samples buffer")));
+      }
+      
+      nb_samples = avresample_convert(avr,
+                                      &output,
+                                      out_linesize,
+                                      nb_samples,
+                                      pSrcFrame->data,
+                                      pSrcFrame->linesize[0],
+                                      pSrcFrame->nb_samples);
+      int size = nb_samples * 
+                 pCodecContext->channels *
+                 av_get_bytes_per_sample(pCodecContext->sample_fmt);
+/*
+      needed_size = av_samples_get_buffer_size(NULL,
+       pCodecContext->channels,
+       frame->nb_samples, sample_fmt,
+*/
+      instance->pFrame->nb_samples = nb_samples;
+      
+      int ret = avcodec_fill_audio_frame(instance->pFrame,
+                                        pCodecContext->channels,
+                                        pCodecContext->sample_fmt,
+                                        output,
+                                        size,
+                                        1);
+      if(ret<0) {
+        fprintf(stderr, "avcodec_fill_audio_frame returned %i\n", ret);
+        return ThrowException(Exception::TypeError(String::New("Failed filling frame")));
+      }
+      av_freep(&output);
     }
-    
-    instance->pFrame->nb_samples = nb_samples;
-    
-    int size = nb_samples * 
-               pCodecContext->channels * 
-               av_get_bytes_per_sample(pCodecContext->sample_fmt);
-        
-    int ret = avcodec_fill_audio_frame(instance->pFrame, 
-                                       pCodecContext->channels, 
-                                       pCodecContext->sample_fmt,
-                                       instance->pAudioBuffer, 
-                                       size, 
-                                       1);
-    if(ret<0) {
-      return ThrowException(Exception::TypeError(String::New("Failed filling frame")));
-    }
-    
+  
     instance->pFrame->owner = instance->pDstStream->codec;
+    
     return instance->frame;
   }
 }
+// Available layouts:
+/*
+   AV_CH_LAYOUT_5POINT1
+   AV_CH_LAYOUT_2_1
+   AV_CH_LAYOUT_2_2
+   AV_CH_LAYOUT_2POINT1
+   AV_CH_LAYOUT_3POINT1
+   AV_CH_LAYOUT_4POINT0
+   AV_CH_LAYOUT_4POINT1
+   AV_CH_LAYOUT_5POINT0
+   AV_CH_LAYOUT_5POINT0_BACK
+   AV_CH_LAYOUT_5POINT1
+   AV_CH_LAYOUT_5POINT1_BACK
+   AV_CH_LAYOUT_6POINT0
+   AV_CH_LAYOUT_6POINT0_FRONT
+   AV_CH_LAYOUT_6POINT1
+   AV_CH_LAYOUT_6POINT1_BACK
+   AV_CH_LAYOUT_6POINT1_FRONT
+   AV_CH_LAYOUT_7POINT0
+   AV_CH_LAYOUT_7POINT0_FRONT
+   AV_CH_LAYOUT_7POINT1
+   AV_CH_LAYOUT_7POINT1_WIDE
+   AV_CH_LAYOUT_7POINT1_WIDE_BACK
+   AV_CH_LAYOUT_HEXAGONAL
+   AV_CH_LAYOUT_MONO
+   AV_CH_LAYOUT_OCTAGONAL
+   AV_CH_LAYOUT_QUAD
+   AV_CH_LAYOUT_STEREO
+   AV_CH_LAYOUT_STEREO_DOWNMIX
+   AV_CH_LAYOUT_SURROUND
+*/
+
+
 

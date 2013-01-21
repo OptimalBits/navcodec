@@ -30,13 +30,17 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavresample/avresample.h>
+#include <libavutil/opt.h>
+#include <libavutil/error.h>
 }
 
 using namespace v8;
 
 class NAVResample : node::ObjectWrap {
 private:
-  struct ReSampleContext *pContext;
+  //struct ReSampleContext *pContext;
+  AVAudioResampleContext *pContext;
   
   AVFrame *pFrame;
   
@@ -46,6 +50,7 @@ private:
   
   bool passthrough;
   
+  AVStream *pSrcStream;
   AVStream *pDstStream;
 
   
