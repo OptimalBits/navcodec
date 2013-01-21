@@ -230,7 +230,6 @@ Todo
 -
 
 - Make Asynchronous.
-- AC35.1 to stereo transcoding.
 - multiple pass encoding.
 - Add support for libavfilter.
 
