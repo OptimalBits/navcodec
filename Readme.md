@@ -212,6 +212,15 @@ you can get a list of other configuration options using:
 
 		make install
 
+- Notes
+
+Mac users will need to install Xcode in order to be able to compile libavcodec by themselves. 
+
+It may be needed to install libvpx separatelly if you need WebM support (in Mac):
+
+    brew install libvpx
+	
+
 References
 -
 
