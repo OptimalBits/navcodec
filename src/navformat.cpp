@@ -119,7 +119,6 @@ static int decodeFrame(AVFormatContext *pFormatCtx,
 }
 
 static void AsyncWork(uv_work_t* req) {
-
   Baton* pBaton = static_cast<Baton*>(req->data);
   
   decodeFrame(pBaton->pFormatCtx,
