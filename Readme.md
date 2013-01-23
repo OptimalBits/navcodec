@@ -1,9 +1,10 @@
-Node libavcodec bindings [![BuildStatus](https://secure.travis-ci.org/OptimalBits/navcodec.png?branch=master)](http://travis-ci.org/optimalbits/navcodec)
+Node Video Transcoding Library [![BuildStatus](https://secure.travis-ci.org/OptimalBits/navcodec.png?branch=master)](http://travis-ci.org/optimalbits/navcodec)
 =
 
-*navcodec* is a module that aims to provide a node wrapper for the excellent [libavcodec](http://libav.org) library. This module aims to create a new javascript API inspired by the underlying library that is more javascript oriented and easier to use.
+*navcodec* provides a high level and flexible javascript API for video and audio transcoding based on the excelent [libavcodec](http://libav.org) library.
 
-The initial priority will be to make the transcoding use case, and later move to other uses cases such as playing, filtering, editing, etc.
+The library can transcode almost any known video and audio format efficiently, it can generate thumbnails or output video in multiple resolutions in parallel, and also optimize the output video for web reproduction.
+
 
 Follow [optimalbits](http://twitter.com/optimalbits) for news and updates regarding this library.
 
@@ -226,11 +227,10 @@ References
 
 [Ubuntu HOWTO: Install and use the latest FFmpeg and x264](http://ubuntuforums.org/showthread.php?t=786095)
 
-Todo
+Roadmap
 -
 
-- Make Asynchronous.
-- multiple pass encoding.
+- Multiple pass encoding.
 - Add support for libavfilter.
 
 License
