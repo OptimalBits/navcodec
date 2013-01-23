@@ -90,7 +90,7 @@ struct Baton {
   char *output;
 };
 
-void AsyncWork(uv_work_t* req) {
+static void AsyncWork(uv_work_t* req) {
   const char *error = NULL;
   
   FILE *infile  = NULL;
@@ -318,7 +318,7 @@ error_out:
   baton->error = error;
 }
 
-void AsyncAfter(uv_work_t* req) {
+static void AsyncAfter(uv_work_t* req) {
   HandleScope scope;
   Baton* baton = static_cast<Baton*>(req->data);
   

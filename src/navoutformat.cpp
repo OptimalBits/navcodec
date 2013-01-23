@@ -370,6 +370,50 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   return Undefined();
 }
 
+Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame, int *outSize){
+  int ret;
+  AVCodecContext *pContext = pStream->codec;
+  
+  if(pFrame){
+    pFrame->pts = videoFrame;
+    videoFrame++;
+  }
+  
+  AVPacket packet;
+  packet.data = pVideoBuffer;
+  packet.size = videoBufferSize;
+
+  av_init_packet(&packet);
+      
+  if(pContext->coded_frame->key_frame){
+    packet.flags |= AV_PKT_FLAG_KEY;
+  }
+      
+  packet.stream_index = pStream->index;
+  
+  if (pContext->coded_frame &&
+      pContext->coded_frame->pts != (int64_t)AV_NOPTS_VALUE){
+    packet.pts= av_rescale_q(pContext->coded_frame->pts,
+                             pContext->time_base,
+                             pStream->time_base);
+  }
+  
+  int gotPacket;
+  if(avcodec_encode_video2(pContext, &packet, pFrame, &gotPacket) < 0){
+    return ThrowException(Exception::Error(String::New("Error encoding frame")));
+  }
+  
+  if (gotPacket > 0) {
+    ret = av_interleaved_write_frame(pFormatCtx, &packet);    
+    if (ret) {
+      return ThrowException(Exception::Error(String::New("Error writing video frame")));
+    }
+  }
+
+  return Undefined();
+}
+
+/*
 Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, 
                                                 AVFrame *pFrame,
                                                 int *outSize){
@@ -414,7 +458,7 @@ Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream,
 
   return Undefined();
 }
-
+*/
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
   
