@@ -25,6 +25,7 @@
             "-D__STDC_CONSTANT_MACROS",
             "-D_FILE_OFFSET_BITS=64",
             "-D_LARGEFILE_SOURCE",
+            "-O3",
             "-Wall"],
 	    	    "libraries" : [
               "-lavcodec",
@@ -40,6 +41,7 @@
             "-D__STDC_CONSTANT_MACROS",
             "-D_FILE_OFFSET_BITS=64",
             "-D_LARGEFILE_SOURCE",
+            "-O3",
             "-Wall"],
 	    	    "libraries" : [
               "-lavcodec",
