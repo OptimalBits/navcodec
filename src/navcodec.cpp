@@ -63,6 +63,8 @@ extern "C" { // Cause of name mangling in C++, we use extern C here
     NAVStream::Init();    
     NAVCodecContext::Init();
     NAVDictionary::Init();
+    
+    DecoderNotifier::Init();
   }
   NODE_MODULE(navcodec, init);
 }

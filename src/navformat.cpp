@@ -19,12 +19,221 @@
  * IN THE SOFTWARE.
  */
 
+#include <string.h>
+
 #include "navformat.h"
 #include "navframe.h"
 #include "navdictionary.h"
 #include "navutils.h"
 
+#define MAX_NUM_STREAMFRAMES  16
+
 using namespace v8;
+
+class DecoderNotifier;
+
+typedef struct {
+  Persistent<Object> stream;
+  Persistent<Object> frame;
+  AVStream *pStream;
+  AVFrame *pFrame;
+} StreamFrame;
+
+struct Baton {
+  uv_work_t request;
+  Persistent<Object> navformat;
+  Persistent<Function> callback;
+  Persistent<Object> notifier;
+  
+  // Input
+  AVFormatContext *pFormatCtx;
+  unsigned int numStreams;
+  StreamFrame streamFrames[MAX_NUM_STREAMFRAMES];
+  
+  // Output
+  int result;
+  int streamIndex;
+  
+  const char *error;
+};
+
+//
+// Decode Frame
+//
+
+static int decodeFrame(AVFormatContext *pFormatCtx,
+                       unsigned int numStreams,
+                       StreamFrame *streamFrames,
+                       Baton *pBaton){
+  AVPacket packet;
+  
+  int ret, finished;
+  
+  pBaton->error = NULL;
+  pBaton->streamIndex = -1;
+  
+  while((ret=av_read_frame(pFormatCtx, &packet))>=0){
+  
+    unsigned int i;
+    int res;
+    
+    AVStream *pStream = NULL;
+    AVFrame *pFrame = NULL;
+    
+    for(i=0;i<numStreams; i++){
+      if (streamFrames[i].pStream->index == packet.stream_index) {
+        pStream = streamFrames[i].pStream;
+        pFrame = streamFrames[i].pFrame;
+        break;
+      }
+    }
+
+    if(pStream){
+      switch(pStream->codec->codec_type){
+        case AVMEDIA_TYPE_AUDIO:
+          res = avcodec_decode_audio4(pStream->codec, pFrame, &finished, &packet);
+          break;
+        case AVMEDIA_TYPE_VIDEO:
+          res = avcodec_decode_video2(pStream->codec, pFrame, &finished, &packet);
+          break;
+        default:
+          res = -1;
+      }
+      av_free_packet(&packet);
+      
+      if(res<0){
+        pBaton->error = "Error decoding frame";
+        break;
+      }
+      
+      if(finished){
+        streamFrames[i].pFrame->owner = pStream->codec;
+        pBaton->streamIndex = i;
+        //pFrame->pts = packet.pts;
+        break;
+      }
+    }
+  }
+  
+  return ret;
+}
+
+void AsyncWork(uv_work_t* req) {
+
+  Baton* pBaton = static_cast<Baton*>(req->data);
+  
+  decodeFrame(pBaton->pFormatCtx,
+              pBaton->numStreams,
+              pBaton->streamFrames,
+              pBaton);
+}
+
+static void CleanUp(Baton *pBaton){
+  for(unsigned int i=0;i<pBaton->numStreams; i++){
+    avcodec_close(pBaton->streamFrames[i].pStream->codec);
+    pBaton->streamFrames[i].stream.Dispose();
+    pBaton->streamFrames[i].frame.Dispose();
+  }
+
+  pBaton->navformat.Dispose();
+  pBaton->callback.Dispose();
+  pBaton->notifier.Dispose();
+  delete pBaton;
+}
+
+Handle<Value> MyFunction(const Arguments& args) {
+  HandleScope scope;
+  return scope.Close(String::New("hello world"));
+}
+
+static void AsyncAfter(uv_work_t* req) {
+  HandleScope scope;
+  Baton* pBaton = static_cast<Baton*>(req->data);
+  
+  if (pBaton->error) {
+    Local<Value> err = Exception::Error(String::New(pBaton->error));
+    Local<Value> argv[] = { err };
+    
+    TryCatch try_catch;
+    pBaton->callback->Call(Context::GetCurrent()->Global(), 1, argv);
+    
+    if (try_catch.HasCaught()) {
+      node::FatalException(try_catch);
+    }
+    
+    CleanUp(pBaton);
+  } else {
+    if(pBaton->streamIndex >= 0){
+       int i = pBaton->streamIndex;
+      
+      // Call callback with decoded frame
+      Handle<Value> argv[] = {
+        pBaton->streamFrames[i].stream,
+        pBaton->streamFrames[i].frame,
+        Integer::New(pBaton->pFormatCtx->pb->pos),
+        pBaton->notifier
+      };
+      
+      pBaton->callback->Call(Context::GetCurrent()->Global(), 4, argv);
+    }else{
+      Local<Value> argv[] = { Local<Value>::New(Null()) };
+      pBaton->callback->Call(Context::GetCurrent()->Global(), 1, argv);
+      
+      // Close all the codecs from the given streams & dispose V8 objects
+     CleanUp(pBaton);
+    }
+  }
+}
+
+// DecoderNotifyer
+
+Persistent<ObjectTemplate> DecoderNotifier::templ;
+
+DecoderNotifier::DecoderNotifier(Baton *pBaton){
+  this->pBaton = pBaton;
+}
+  
+DecoderNotifier::~DecoderNotifier(){
+  printf("DecoderNotifier destructor\n");
+}
+  
+void DecoderNotifier::Init(){
+  HandleScope scope;
+  
+  Local<ObjectTemplate> templ = ObjectTemplate::New();
+  templ->SetInternalFieldCount(1);
+  
+  DecoderNotifier::templ = Persistent<ObjectTemplate>::New(templ);
+}
+
+Handle<Object> DecoderNotifier::New(Baton *pBaton) {
+  HandleScope scope;
+  
+  DecoderNotifier *instance = new DecoderNotifier(pBaton);
+
+  Handle<Object> obj = DecoderNotifier::templ->NewInstance();
+  instance->Wrap(obj);
+  
+  SET_KEY_VALUE(obj, "done", FunctionTemplate::New(Done)->GetFunction());
+
+  return scope.Close(obj);
+}
+
+Handle<Value> DecoderNotifier::Done(const Arguments& args) {
+  HandleScope scope;
+
+  DecoderNotifier* obj = ObjectWrap::Unwrap<DecoderNotifier>(args.This());
+  
+  // Process next frame
+  uv_queue_work(uv_default_loop(),
+                &(obj->pBaton->request),
+                AsyncWork,
+                AsyncAfter);
+  
+  return Undefined();
+}
+
+//-------------------------------------------------------------------------------------------
 
 NAVFormat::NAVFormat(){
   filename = NULL;
@@ -99,8 +308,7 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
     SET_KEY_VALUE(self, "streams", streams);
     SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
     SET_KEY_VALUE(self, "duration", Number::New(pFormatCtx->duration / (float) AV_TIME_BASE));
-    
-    
+
   }
   return self;
 }
@@ -110,15 +318,8 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
   HandleScope scope;
   Local<Array> streams;
   Local<Function> callback;
-
-  typedef struct{
-    Handle<Object> stream;
-    Handle<Object> frame;
-    AVStream *pStream;
-    AVFrame *pFrame;
-  } StreamFrame;
-     
-  StreamFrame streamFrames[16];
+  
+  StreamFrame streamFrames[MAX_NUM_STREAMFRAMES];
   
   if(!(args[0]->IsArray())){
     return ThrowException(Exception::TypeError(String::New("First parameter must be an array")));
@@ -127,12 +328,12 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
     return ThrowException(Exception::TypeError(String::New("Second parameter must be a funcion")));
   }
   
+  Local<Object> self = args.This();
+  
   NAVFormat* instance = UNWRAP_OBJECT(NAVFormat, args);
   
   streams = Local<Array>::Cast(args[0]);
   callback = Local<Function>::Cast(args[1]);
-  
-  Handle<Value> argv[3];
  
   //
   // Create the required frames and associate every frame to a stream.
@@ -140,15 +341,18 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
   //
   for(unsigned int i=0;i<streams->Length(); i++){
     AVStream *pStream;
+  
+    Handle<Object> stream = streams->Get(i)->ToObject();
+    streamFrames[i].stream = Persistent<Object>::New(stream);
     
-    streamFrames[i].stream = streams->Get(i)->ToObject();
     pStream = node::ObjectWrap::Unwrap<NAVStream>(streamFrames[i].stream)->pContext;
     
     streamFrames[i].pStream = pStream;
     streamFrames[i].pFrame = avcodec_alloc_frame();
 
     Handle<Object> frame = NAVFrame::New(streamFrames[i].pFrame);
-    streamFrames[i].frame = frame;
+    
+    streamFrames[i].frame = Persistent<Object>::New(frame);
     
     AVCodecContext *pCodecCtx = streamFrames[i].pStream->codec;
     
@@ -165,68 +369,27 @@ Handle<Value> NAVFormat::Decode(const Arguments& args) {
   //
   // Start decoding
   //
-  AVPacket packet;
-  int ret, finished;
   
-  while ((ret=av_read_frame(instance->pFormatCtx, &packet))>=0) {
-    unsigned int i;
-    int res;
-    
-    AVStream *pStream = NULL;
-    AVFrame *pFrame = NULL;
-    
-    for(i=0;i<streams->Length(); i++){
-      if (streamFrames[i].pStream->index == packet.stream_index) {
-        pStream = streamFrames[i].pStream;
-        pFrame = streamFrames[i].pFrame;
-        break;
-      }
-    }
-        
-    if(pStream){
-      res = -1;
-      
-      if(pStream->codec->codec_type == AVMEDIA_TYPE_AUDIO){
-        res = avcodec_decode_audio4(pStream->codec, pFrame, &finished, &packet);
-      }
-      if(pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO){
-        res = avcodec_decode_video2(pStream->codec, pFrame, &finished, &packet);
-      }
-      
-      if(res<0){
-        return ThrowException(Exception::Error(String::New("Error decoding frame")));
-      }
-      
-      if(finished){
-        argv[0] = streamFrames[i].stream;
-        argv[1] = streamFrames[i].frame;
-        streamFrames[i].pFrame->owner = pStream->codec;
-        //pFrame->pts = packet.pts;
-        
-        argv[2] = Integer::New(instance->pFormatCtx->pb->pos);  
-        callback->Call(Context::GetCurrent()->Global(), 3, argv);
-      }
-    }
-    
-    av_free_packet(&packet);
-  }
+  Baton* pBaton = new Baton();
   
-  // Close all the codecs from the given streams.
-  if (ret<0) {
-    Local<Value> err = Exception::Error(String::New("Error reading frame"));
-    Local<Value> argv[] = { err };
-    callback->Call(Context::GetCurrent()->Global(), 1, argv);
-  } else {
-    Local<Value> argv[] = { Local<Value>::New(Null()) };
-    callback->Call(Context::GetCurrent()->Global(), 1, argv);
-  }
+  pBaton->navformat = Persistent<Object>::New(self);
+  pBaton->pFormatCtx = instance->pFormatCtx;
+  pBaton->numStreams = streams->Length();
   
-  // Clean up
-  for(unsigned int i=0;i<streams->Length(); i++){
-    avcodec_close(streamFrames[i].pStream->codec);
-  }
+  memcpy((void*)&(pBaton->streamFrames), (void*)&streamFrames, sizeof(streamFrames));
+  
+  pBaton->notifier = Persistent<Object>::New(DecoderNotifier::New(pBaton));
+  
+  pBaton->request.data = pBaton;
+  
+  pBaton->callback = Persistent<Function>::New(callback);
+  
+  uv_queue_work(uv_default_loop(), 
+                &pBaton->request,
+                AsyncWork, 
+                AsyncAfter);
 
-  return Integer::New(0);
+  return Undefined();
 }
 
 Handle<Value> NAVFormat::Dump(const Arguments& args) {

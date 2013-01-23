@@ -38,7 +38,6 @@ void NAVFrame::Init(){
   HandleScope scope;
   
   Local<ObjectTemplate> templ = ObjectTemplate::New();
-  templ = ObjectTemplate::New();
   templ->SetInternalFieldCount(1);
   
   NAVFrame::templ = Persistent<ObjectTemplate>::New(templ);

@@ -56,4 +56,25 @@ public:
   static Handle<Value> Dump(const Arguments& args);
 };
 
+
+//
+// Decoder Notifier class. Used for clients notifying when they are done
+// processing a decoded frame.
+//
+class DecoderNotifier : node::ObjectWrap {
+
+public:
+
+  struct Baton *pBaton;
+  DecoderNotifier(Baton *pBaton);
+  ~DecoderNotifier();
+  
+  static Persistent<ObjectTemplate> templ;
+  
+  static void Init();
+  
+  static Handle<Object> New(Baton *pBaton);
+  static Handle<Value> Done(const Arguments& args);
+};
+
 #endif // _NAVFORMAT_H
