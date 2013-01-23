@@ -38,7 +38,6 @@ using namespace v8;
 
 class NAVOutputFormat : node::ObjectWrap {
 private:
-  AVFormatContext *pFormatCtx;
   AVOutputFormat *pOutputFormat;
 
   char *filename;
@@ -50,20 +49,23 @@ private:
   int audioBufferSize;
   AVStream *pAudioStream;
   
-  NAVAudioFifo *pFifo;
-  
   int64_t videoFrame;
 
-  int outputAudio(AVFormatContext *pFormatContext,
-                  AVStream *pStream,
-                  AVFrame *pFrame);
 public:
   NAVOutputFormat();
   ~NAVOutputFormat();
   
-  Handle<Value> EncodeVideoFrame(AVStream *pStream, 
-                                 AVFrame *pFrame,
-                                 int *outSize);
+  // --
+  AVFormatContext *pFormatCtx;
+  NAVAudioFifo *pFifo;
+  
+  int outputAudio(AVFormatContext *pFormatContext,
+                  AVStream *pStream,
+                  AVFrame *pFrame);
+  // --
+  const char *EncodeVideoFrame(AVStream *pStream,
+                               AVFrame *pFrame,
+                               int *outSize);
   
   static Persistent<FunctionTemplate> templ;
   

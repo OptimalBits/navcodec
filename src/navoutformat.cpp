@@ -370,6 +370,50 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   return Undefined();
 }
 
+const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame, int *outSize){
+  int ret;
+  AVCodecContext *pContext = pStream->codec;
+  
+  if(pFrame){
+    pFrame->pts = videoFrame;
+    videoFrame++;
+  }
+  
+  AVPacket packet;
+  packet.data = pVideoBuffer;
+  packet.size = videoBufferSize;
+
+  av_init_packet(&packet);
+      
+  if(pContext->coded_frame->key_frame){
+    packet.flags |= AV_PKT_FLAG_KEY;
+  }
+      
+  packet.stream_index = pStream->index;
+  
+  if (pContext->coded_frame &&
+      pContext->coded_frame->pts != (int64_t)AV_NOPTS_VALUE){
+    packet.pts= av_rescale_q(pContext->coded_frame->pts,
+                             pContext->time_base,
+                             pStream->time_base);
+  }
+  
+  int gotPacket;
+  if(avcodec_encode_video2(pContext, &packet, pFrame, &gotPacket) < 0){
+    return "Error encoding frame";
+  }
+  
+  if (gotPacket > 0) {
+    ret = av_interleaved_write_frame(pFormatCtx, &packet);    
+    if (ret) {
+      return "Error writing video frame";
+    }
+  }
+
+  return NULL;
+}
+
+/*
 Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, 
                                                 AVFrame *pFrame,
                                                 int *outSize){
@@ -394,7 +438,7 @@ Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream,
     if(pContext->coded_frame->key_frame){
       packet.flags |= AV_PKT_FLAG_KEY;
     }
-      
+    
     packet.stream_index = pStream->index;
     packet.data = pVideoBuffer;
     packet.size = *outSize;
@@ -414,60 +458,125 @@ Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream,
 
   return Undefined();
 }
+*/
+
+static const char *EncodeFrame(NAVOutputFormat* instance, AVStream *pStream, AVFrame *pFrame){
+  int ret = 0;
+  
+  AVCodecContext *pCodecContext = pStream->codec;
+  
+  switch (pCodecContext->codec_type) {
+    case AVMEDIA_TYPE_VIDEO:
+      int outSize;
+      return instance->EncodeVideoFrame(pStream, pFrame, &outSize);
+      break;
+    case AVMEDIA_TYPE_AUDIO:
+      ret = instance->pFifo->put(pFrame);
+      if(ret<0){
+        return "Error encoding adding frame to fifo";
+      }
+    
+      while(instance->pFifo->moreFrames()){
+        AVFrame *pFifoFrame;
+      
+        pFifoFrame = instance->pFifo->get();
+      
+        ret = instance->outputAudio(instance->pFormatCtx,
+                                    pStream,
+                                    pFifoFrame);
+        if(ret<0){
+          return "Error outputing audio frame";
+        }
+      }
+      break;
+    default:
+      break;
+  }
+  return NULL;
+}
+
+struct Baton {
+  uv_work_t request;
+  Persistent<Function> callback;
+  
+  // Input
+  NAVOutputFormat* pOutputFormat;
+  AVStream *pStream;
+  AVFrame *pFrame;
+  
+  // Output
+  
+  const char *error;
+};
+
+static void AsyncWork(uv_work_t* req) {
+  
+  Baton* pBaton = static_cast<Baton*>(req->data);
+  
+  pBaton->error = EncodeFrame(pBaton->pOutputFormat,
+                              pBaton->pStream,
+                              pBaton->pFrame);
+  }
+
+static void AsyncAfter(uv_work_t* req) {
+  HandleScope scope;
+  Baton* pBaton = static_cast<Baton*>(req->data);
+    
+  Local<Value> argv[1];
+  Local<Value> err;
+  int numArgs = 0;
+  
+  if (pBaton->error) {
+    err = Exception::Error(String::New(pBaton->error));
+    argv[0] = err;
+    numArgs = 1;
+  }
+  
+  TryCatch try_catch;
+  pBaton->callback->Call(Context::GetCurrent()->Global(), numArgs, argv);
+    
+  if (try_catch.HasCaught()) {
+    node::FatalException(try_catch);
+  }
+  
+  pBaton->callback.Dispose();
+  delete pBaton;
+}
 
 Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   HandleScope scope;
-  
-  int ret = 0;
 
-  if(args.Length()<2){
-    return ThrowException(Exception::TypeError(String::New("This Function requires 2 parameters")));
+  if(args.Length()<3){
+    return ThrowException(Exception::TypeError(String::New("This Function requires 3 parameters")));
   }
 
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
   
   Local<Object> stream = Local<Object>::Cast(args[0]);
   Local<Object> frame = Local<Object>::Cast(args[1]);
+  Local<Function> callback = Local<Function>::Cast(args[2]);
   
   AVStream *pStream = node::ObjectWrap::Unwrap<NAVStream>(stream)->pContext;  
   AVFrame *pFrame = (node::ObjectWrap::Unwrap<NAVFrame>(frame))->pContext;
-
-  AVCodecContext *pCodecContext = pStream->codec;
   
-  if((pCodecContext->codec_type != AVMEDIA_TYPE_VIDEO) && 
-     (pCodecContext->codec_type != AVMEDIA_TYPE_AUDIO)){
-    return Undefined();
-  }
+  Baton* pBaton = new Baton();
   
-  if(pCodecContext->codec_type == AVMEDIA_TYPE_VIDEO){
-    int outSize;
-    Handle<Value> result = instance->EncodeVideoFrame(pStream, pFrame, &outSize);
-    if(result->IsUndefined() != false){
-      return result;
-    }
-  }
-  
-  if(pCodecContext->codec_type == AVMEDIA_TYPE_AUDIO){    
-    ret = instance->pFifo->put(pFrame);
-    if(ret<0){
-      return ThrowException(Exception::Error(String::New("Error encoding adding frame to fifo")));
-    }
+  pBaton->pStream = pStream;
+  pBaton->pFrame = pFrame;
+  pBaton->pOutputFormat = instance;
     
-    while(instance->pFifo->moreFrames()){
-      AVFrame *pFifoFrame;
-      
-      pFifoFrame = instance->pFifo->get();
-      
-      ret = instance->outputAudio(instance->pFormatCtx, 
-                                  pStream, 
-                                  pFifoFrame);
-      if(ret<0){
-        return ThrowException(Exception::Error(String::New("Error outputing audio frame")));
-      }
-    }
-  }
+  pBaton->request.data = pBaton;
+  
+  pBaton->callback = Persistent<Function>::New(callback);
+  
+  uv_queue_work(uv_default_loop(),
+                &(pBaton->request),
+                AsyncWork,
+                AsyncAfter);
   
   return Undefined();
+  
+  //return EncodeFrame(instance, pStream, pFrame);
 }
 
 Handle<Value> NAVOutputFormat::End(const Arguments& args) {
@@ -484,7 +593,7 @@ Handle<Value> NAVOutputFormat::End(const Arguments& args) {
     if(pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO){
       int outSize;
       do {
-        result = instance->EncodeVideoFrame(pStream, NULL, &outSize);
+        (void)instance->EncodeVideoFrame(pStream, NULL, &outSize);
         if(outSize < 0){
           return ThrowException(Exception::Error(String::New("Error flushing video encoder")));
         }

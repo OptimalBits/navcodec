@@ -16,7 +16,8 @@
     "node": ">=0.6.10"
   },
   "dependencies": {
-    "underscore": "*"
+    "underscore": "*",
+    "async": "*"
   },
   "devDependencies": {
     "mocha": "*",
