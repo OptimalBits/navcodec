@@ -141,10 +141,18 @@ Handle<Value> NAVThumbnail::Write(const Arguments& args) {
 
 	pFrame->pts = 1;
 	pFrame->quality = instance->pContext->global_quality;
-	int encodedSize = avcodec_encode_video(instance->pContext, instance->pBuffer, instance->bufferSize, pFrame);
-  if(encodedSize<=0){
-    return ThrowException(Exception::Error(String::New("Error encoding file")));
+	
+  AVPacket packet;
+  packet.data = instance->pBuffer;
+  packet.size = instance->bufferSize;
+
+  av_init_packet(&packet);
+  
+  int gotPacket;
+  if(avcodec_encode_video2(instance->pContext, &packet, pFrame, &gotPacket) < 0){
+    return ThrowException(Exception::Error(String::New("Error encoding thumbnail")));
   }
+  int encodedSize = packet.size;
 
 	FILE *fileHandle = fopen(filename, "wb");
   if(fileHandle == NULL){
