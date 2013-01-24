@@ -1,12 +1,14 @@
-Node Video Transcoding Library [![BuildStatus](https://secure.travis-ci.org/OptimalBits/navcodec.png?branch=master)](http://travis-ci.org/optimalbits/navcodec)
+Node Audio and Video Transcoding Library [![BuildStatus](https://secure.travis-ci.org/OptimalBits/navcodec.png?branch=master)](http://travis-ci.org/optimalbits/navcodec)
 =
 
-*navcodec* provides a high level and flexible javascript API for video and audio transcoding based on the excelent [libavcodec](http://libav.org) library.
+*navcodec* provides a high level and flexible javascript module for video and audio transcoding based on the excelent [libavcodec](http://libav.org)(from the FFmpeg team) library.
 
-The library can transcode almost any known video and audio format efficiently, it can generate thumbnails or output video in multiple resolutions in parallel, and also optimize the output video for web reproduction.
+This module can transcode almost any known video and audio format efficiently, it can generate multiple thumbnails or output video in multiple resolutions in parallel quickly with low memory consumption while also optimizing the output for web reproduction.
 
 
 Follow [optimalbits](http://twitter.com/optimalbits) for news and updates regarding this library.
+
+#Examples
 
 Transcoding
 -
@@ -38,21 +40,28 @@ Since the transcode uses mostly *libavcodec* optimized functions, the above exam
 
 Available options (and their defaults):
 
+    // Video
     width ( input width )
     height (input height )
     videoBitrate (input bitrate if available, 0 otherwise)
     videoCodec ( standard codec for current file container)
     keepAspectRatio (true)
+    skipVideo (false)
+    skipVideoFrames (0)*
+    
+    // Audio
     audioBitrate (input bitrate if available, 0 otherwise)
     sampleRate (44100)
     channels (2),
     audioCodec (standard codec for current file container)
     skipAudio (false)
-    skipVideo (false)
-    maxVideoFrames (inf)
-    videoFrameInterval (1)
+  
+    // Thumbnails
+    keepAspectRatio (true)
+    width ( input width )
+    height (input height )
     
-
+    *Experimental feature.
 
 Multiple outputs
 -
@@ -231,7 +240,8 @@ Roadmap
 -
 
 - Multiple pass encoding.
-- Add support for libavfilter.
+- Support for ffmpeg / avconv presets
+- Support for libavfilter.
 
 License
 -
