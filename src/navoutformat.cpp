@@ -69,6 +69,7 @@ NAVOutputFormat::NAVOutputFormat(){
   pFifo = NULL;
   
   videoFrame = 0;
+  skipVideo = 0;
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
@@ -258,6 +259,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   if(strcmp(*v8streamType, "Video") == 0){
     codec_type = AVMEDIA_TYPE_VIDEO;
     codec_id = instance->pOutputFormat->video_codec;
+    instance->skipVideo = GET_OPTION_UINT32(options, skipVideoFrames, 0);
   } else if(strcmp(*v8streamType, "Audio") == 0){
     codec_type = AVMEDIA_TYPE_AUDIO;
     codec_id = instance->pOutputFormat->audio_codec;
@@ -379,34 +381,35 @@ const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame
     videoFrame++;
   }
   
-  AVPacket packet;
-  packet.data = pVideoBuffer;
-  packet.size = videoBufferSize;
+  if(pFrame == NULL || skipVideo == 0 || (videoFrame % skipVideo) == 0){
+    AVPacket packet;
+    packet.data = pVideoBuffer;
+    packet.size = videoBufferSize;
 
-  av_init_packet(&packet);
+    av_init_packet(&packet);
       
-  if(pContext->coded_frame->key_frame){
-    packet.flags |= AV_PKT_FLAG_KEY;
-  }
+    if(pContext->coded_frame->key_frame){
+      packet.flags |= AV_PKT_FLAG_KEY;
+    }
       
-  packet.stream_index = pStream->index;
+    packet.stream_index = pStream->index;
   
-  if (pContext->coded_frame &&
-      pContext->coded_frame->pts != (int64_t)AV_NOPTS_VALUE){
-    packet.pts= av_rescale_q(pContext->coded_frame->pts,
-                             pContext->time_base,
-                             pStream->time_base);
-  }
+    if (pContext->coded_frame && pContext->coded_frame->pts != (int64_t)AV_NOPTS_VALUE){
+      packet.pts= av_rescale_q(pContext->coded_frame->pts,
+                               pContext->time_base,
+                               pStream->time_base);
+    }
   
-  int gotPacket;
-  if(avcodec_encode_video2(pContext, &packet, pFrame, &gotPacket) < 0){
-    return "Error encoding frame";
-  }
+    int gotPacket;
+    if(avcodec_encode_video2(pContext, &packet, pFrame, &gotPacket) < 0){
+      return "Error encoding frame";
+    }
   
-  if (gotPacket > 0) {
-    ret = av_interleaved_write_frame(pFormatCtx, &packet);    
-    if (ret) {
-      return "Error writing video frame";
+    if (gotPacket > 0) {
+      ret = av_interleaved_write_frame(pFormatCtx, &packet);
+      if (ret) {
+        return "Error writing video frame";
+      }
     }
   }
 

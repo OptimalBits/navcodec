@@ -50,6 +50,7 @@ private:
   AVStream *pAudioStream;
   
   int64_t videoFrame;
+  int32_t skipVideo;
 
 public:
   NAVOutputFormat();
