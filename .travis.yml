@@ -4,6 +4,8 @@ node_js:
     - 0.6
 
 before_install:
+  - sudo apt-get update
+  - sudo apt-get install yasm
   - wget http://libav.org/releases/libav-9.1.tar.gz
   - tar -xvf libav-9.1.tar.gz
   - cd libav-9.1
