@@ -4,5 +4,9 @@ node_js:
     - 0.6
 
 before_install:
-  - sudo apt-get update
-  - sudo apt-get install ffmpeg libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
+  - wget http://libav.org/releases/libav-9.1.tar.gz
+  - tar -xvf libav-9.1.tar.gz
+  - cd libav-9.1
+  - ./configure
+  - make
+  - sudo make install
