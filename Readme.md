@@ -156,9 +156,9 @@ Besides the 'metadata' property, other convenient properties are also available 
 Optimize for Web
 -
 
-h.264 files created by libavcodec include the moov atom block at the end of the file ([Understanding the MPEG-4 movie atom](http://www.adobe.com/devnet/video/articles/mp4_movie_atom.html)).
+Normally, a mp4 file created by ffmpeg or any other transcoder, places the index at the end of the file (moov block). This makes impossible for a web browser to perform seeking until the whole file has been downloaded. 
 
-navcodec provides a function called *relocateMoov* that will move the moov atom at the begining of the file, thus making it better for seeking in a web based player. Example:
+Navcodec includes a useful utility called *relocateMoov* that will move the moov atom at the begining of the file, thus making it better for seeking in a web based player. Example:
 
     navcodec.relocateMoov('myinput.mp4','myoutput.mp4', function(err){
       if(err){
@@ -173,7 +173,7 @@ Install
 navcodec depends on [libavcodec](http://libav.org), and this library
 must be installed before you can install this module using npm. 
 
-The library needed is libavcodec version 0.9.x and above. Version 0.9.x includes some new APIs, that are used by this extension.
+The current version of libavcodec needed by navcodec is 0.9.1 and above. 
 
 For most unixes there are packages available, in ubuntu for example use *libavcodec-dev*. If you want you can also compile the source code with your preferred settings, this can be useful if you want to get the maximum performance from the library.
 
@@ -189,7 +189,6 @@ When the libavcodec dependencies are fulfilled, just use npm to install the pack
 	npm install navcodec
 
 
-  
 Compiling libavcodec (Recommended)
 -
 
