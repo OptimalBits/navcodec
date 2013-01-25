@@ -28,7 +28,6 @@ using namespace v8;
 
 // Cheap layout guessing
 int numChannesToLayout(int numChannels){
-  fprintf(stderr, "num channels: %i", numChannels);
   switch(numChannels){
     case 2: return AV_CH_LAYOUT_STEREO;
     case 3: return AV_CH_LAYOUT_2POINT1;
@@ -139,7 +138,7 @@ Handle<Value> NAVResample::New(const Arguments& args) {
   return self;
 }
 
-// ([streams], cb(stream, frame))
+// (frame: AVFrame) -> AVFrame;
 Handle<Value> NAVResample::Convert(const Arguments& args) {
   HandleScope scope;
   Local<Object> srcFrame;
@@ -163,26 +162,27 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
     
     instance->pFrame->quality = 1;
     instance->pFrame->pts = pSrcFrame->pts;
-    //instance->pFrame->format = AV_SAMPLE_FMT_S16; // needed?
-        
+    instance->pFrame->format = pCodecContext->sample_fmt;
+
     {
       AVAudioResampleContext *avr  = instance->pContext;
       
       uint8_t *output;
       int out_linesize;
-      
+
       int nb_samples = avresample_available(avr) +
                        av_rescale_rnd(avresample_get_delay(avr) +
                                       pSrcFrame->nb_samples,
                                       pCodecContext->sample_rate,
                                       instance->pSrcStream->codec->sample_rate,
                                       AV_ROUND_UP);
+      
       av_samples_alloc(&output,
                        &out_linesize,
                        pCodecContext->channels,
                        nb_samples,
                        pCodecContext->sample_fmt,
-                       0);
+                       1);
       if(output == NULL) {
         return ThrowException(Exception::TypeError(String::New("Failed allocating output samples buffer")));
       }
@@ -197,19 +197,16 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
       int size = nb_samples * 
                  pCodecContext->channels *
                  av_get_bytes_per_sample(pCodecContext->sample_fmt);
-/*
-      needed_size = av_samples_get_buffer_size(NULL,
-       pCodecContext->channels,
-       frame->nb_samples, sample_fmt,
-*/
+
       instance->pFrame->nb_samples = nb_samples;
-      
+
       int ret = avcodec_fill_audio_frame(instance->pFrame,
-                                        pCodecContext->channels,
-                                        pCodecContext->sample_fmt,
-                                        output,
-                                        size,
-                                        1);
+                                         pCodecContext->channels,
+                                         pCodecContext->sample_fmt,
+                                         output,
+                                         size,
+                                         1);
+
       if(ret<0) {
         fprintf(stderr, "avcodec_fill_audio_frame returned %i\n", ret);
         return ThrowException(Exception::TypeError(String::New("Failed filling frame")));
@@ -222,6 +219,7 @@ Handle<Value> NAVResample::Convert(const Arguments& args) {
     return instance->frame;
   }
 }
+
 // Available layouts:
 /*
    AV_CH_LAYOUT_5POINT1

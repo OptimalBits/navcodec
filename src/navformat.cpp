@@ -109,7 +109,7 @@ static int decodeFrame(AVFormatContext *pFormatCtx,
       if(finished){
         streamFrames[i].pFrame->owner = pStream->codec;
         pBaton->streamIndex = i;
-        //pFrame->pts = packet.pts;
+        pFrame->pts = packet.pts;
         break;
       }
     }

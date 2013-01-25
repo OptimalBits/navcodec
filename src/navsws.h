@@ -43,6 +43,10 @@ private:
   uint8_t *pFrameBuffer;
   bool passthrough;
   
+  int width;
+  int height;
+  PixelFormat pix_fmt;
+  
 public:
   NAVSws();
   ~NAVSws();

@@ -27,6 +27,7 @@
 #include "navframe.h"
 #include "navdictionary.h"
 #include "navutils.h"
+#include <libavresample/avresample.h>
 
 using namespace v8;
 
@@ -90,7 +91,7 @@ int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
                                  AVFrame *pFrame){
   int gotPacket = 0, ret;
   
-  AVCodecContext *pCodecContext = pFrame->owner;
+  AVCodecContext *pCodecContext = pStream->codec;
   
   AVPacket packet;
   av_init_packet(&packet);
@@ -114,11 +115,11 @@ int NAVOutputFormat::outputAudio(AVFormatContext *pFormatContext,
     }
     
     if (packet.duration > 0){
-      packet.duration = av_rescale_q(packet.duration, 
+      packet.duration = av_rescale_q(packet.duration,
                                      pCodecContext->time_base, 
                                      pStream->time_base);
     }
-    // ret = av_write_frame(instance->pFormatCtx, &packet);
+    //ret = av_write_frame(pFormatContext, &packet);
     ret = av_interleaved_write_frame(pFormatContext, &packet);
   }
   
@@ -277,6 +278,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     return ThrowException(Exception::Error(String::New("Could not create stream")));
   }
   AVCodecContext *pCodecContext = pStream->codec;
+  avcodec_get_context_defaults3 (pCodecContext, pCodec);
     
   PixelFormat pix_fmt = (PixelFormat) options->Get(String::NewSymbol("pix_fmt"))->Uint32Value();
   
@@ -286,7 +288,14 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   pCodecContext->width = GET_OPTION_UINT32(options, width, 480);
   pCodecContext->height = GET_OPTION_UINT32(options, height, 270); 
   
-  pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
+  fprintf(stderr, "Sample format %i", pCodecContext->sample_fmt);
+  
+  if(codec_id == AV_CODEC_ID_MP3){
+    pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16P; // AV_SAMPLE_FMT_S16
+    pCodecContext->channel_layout = AV_CH_LAYOUT_STEREO;
+  } else {
+    pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
+  }
   
   if(codec_type == AVMEDIA_TYPE_AUDIO){
     instance->pAudioStream = pStream;
@@ -372,6 +381,7 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   return Undefined();
 }
 
+#if 0
 const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame, int *outSize){
   int ret;
   AVCodecContext *pContext = pStream->codec;
@@ -387,17 +397,14 @@ const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame
     packet.size = videoBufferSize;
 
     av_init_packet(&packet);
-      
-    if(pContext->coded_frame->key_frame){
-      packet.flags |= AV_PKT_FLAG_KEY;
-    }
-      
+    
     packet.stream_index = pStream->index;
-  
+    packet.pts = pFrame->pts;
+    
     if (pContext->coded_frame && pContext->coded_frame->pts != (int64_t)AV_NOPTS_VALUE){
-      packet.pts= av_rescale_q(pContext->coded_frame->pts,
-                               pContext->time_base,
-                               pStream->time_base);
+      packet.pts = av_rescale_q(pContext->coded_frame->pts,
+                                  pContext->time_base,
+                                  pStream->time_base);
     }
   
     int gotPacket;
@@ -406,6 +413,10 @@ const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame
     }
   
     if (gotPacket > 0) {
+      if(pContext->coded_frame->key_frame){
+        packet.flags |= AV_PKT_FLAG_KEY;
+      }
+      
       ret = av_interleaved_write_frame(pFormatCtx, &packet);
       if (ret) {
         return "Error writing video frame";
@@ -416,10 +427,9 @@ const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame
   return NULL;
 }
 
-/*
-Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, 
-                                                AVFrame *pFrame,
-                                                int *outSize){
+#else
+const char * NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame, int *outSize)
+{
   int ret;
   AVCodecContext *pContext = pStream->codec;
   
@@ -431,7 +441,7 @@ Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream,
   *outSize = avcodec_encode_video(pContext, pVideoBuffer, videoBufferSize, pFrame);
   
   if(*outSize < 0){
-    return ThrowException(Exception::Error(String::New("Error encoding frame")));
+    return "Error encoding frame";
   }
   
   if (*outSize > 0) {
@@ -455,13 +465,13 @@ Handle<Value> NAVOutputFormat::EncodeVideoFrame(AVStream *pStream,
       
     ret = av_interleaved_write_frame(pFormatCtx, &packet);
     if (ret) {
-      return ThrowException(Exception::Error(String::New("Error writing video frame")));
+      return "Error writing video frame";
     }
   }
 
-  return Undefined();
+  return NULL;
 }
-*/
+#endif
 
 static const char *EncodeFrame(NAVOutputFormat* instance, AVStream *pStream, AVFrame *pFrame){
   int ret = 0;

@@ -62,8 +62,6 @@ void NAVSws::Init(Handle<Object> target){
 // (srcStream, dstStream | options)
 Handle<Value> NAVSws::New(const Arguments& args) {
   HandleScope scope;
-  int width, height;
-  PixelFormat pix_fmt;
   Local<Object> options;
   
   NAVSws* instance = new NAVSws();
@@ -86,20 +84,20 @@ Handle<Value> NAVSws::New(const Arguments& args) {
     options = streamOrOptions;
   }
   
-  width = GET_OPTION_UINT32(options, width, 480);
-  height = GET_OPTION_UINT32(options, height, 480);
-  pix_fmt = (PixelFormat) GET_OPTION_UINT32(options, pix_fmt, PIX_FMT_YUV420P);
+  instance->width = GET_OPTION_UINT32(options, width, 480);
+  instance->height = GET_OPTION_UINT32(options, height, 480);
+  instance->pix_fmt = (PixelFormat) GET_OPTION_UINT32(options, pix_fmt, PIX_FMT_YUV420P);
   
-  if( (pSrcStream->codec->width != width) ||
-      (pSrcStream->codec->height != height) ||
-      (pSrcStream->codec->pix_fmt != pix_fmt) ){
+  if( (pSrcStream->codec->width != instance->width) ||
+      (pSrcStream->codec->height != instance->height) ||
+      (pSrcStream->codec->pix_fmt != instance->pix_fmt) ){
   
     instance->pContext = sws_getContext(pSrcStream->codec->width, 
                                         pSrcStream->codec->height, 
                                         pSrcStream->codec->pix_fmt, 
-                                        width,
-                                        height,
-                                        pix_fmt,
+                                        instance->width,
+                                        instance->height,
+                                        instance->pix_fmt,
                                         SWS_BICUBIC, // -> put in options.
                                         NULL, NULL, NULL // Filters & Params (unused for now)
                                         );
@@ -113,18 +111,14 @@ Handle<Value> NAVSws::New(const Arguments& args) {
     if (!instance->pFrame){
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame")));
     }
-    frameBufferSize = avpicture_get_size(pix_fmt, width, height);
+    
+    frameBufferSize = avpicture_get_size(instance->pix_fmt, instance->width, instance->height);
   
     instance->pFrameBuffer = (uint8_t*) av_mallocz(frameBufferSize);
     if (!instance->pFrameBuffer ){
-      av_freep(&(instance->pFrame));
+      avcodec_free_frame(&instance->pFrame);
       return ThrowException(Exception::TypeError(String::New("Error Allocating AVFrame buffer")));
     }
-  
-    avpicture_fill((AVPicture *)instance->pFrame, instance->pFrameBuffer, pix_fmt, width, height);
-    
-    instance->pFrame->width = width;
-    instance->pFrame->height = height;
 
     instance->frame = Persistent<Object>::New(NAVFrame::New(instance->pFrame));
     
@@ -153,6 +147,17 @@ Handle<Value> NAVSws::Convert(const Arguments& args) {
   } else {
     AVFrame *pSrcFrame = (node::ObjectWrap::Unwrap<NAVFrame>(srcFrame))->pContext;
     
+    avcodec_get_frame_defaults(instance->pFrame);
+    
+    avpicture_fill((AVPicture *)instance->pFrame,
+                    instance->pFrameBuffer,
+                    instance->pix_fmt,
+                    instance->width,
+                    instance->height);
+    
+    instance->pFrame->width = instance->width;
+    instance->pFrame->height = instance->height;
+    
     int ret = sws_scale(instance->pContext, 
                         pSrcFrame->data, 
                         pSrcFrame->linesize, 
@@ -165,6 +170,7 @@ Handle<Value> NAVSws::Convert(const Arguments& args) {
     }
   
     instance->pFrame->pts = pSrcFrame->pts;
+    
     return instance->frame;
   }
 }
