@@ -305,11 +305,13 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
       streams->Set(i, NAVStream::New(stream));
     }
     SET_KEY_VALUE(self, "streams", streams);
+    SET_KEY_VALUE(self, "duration", Number::New(pFormatCtx->duration / (float) AV_TIME_BASE));
   }
   
-  SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
-  SET_KEY_VALUE(self, "duration", Number::New(pFormatCtx->duration / (float) AV_TIME_BASE));
-  
+  if(pFormatCtx->metadata){
+    SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
+  }
+
   return self;
 }
 
