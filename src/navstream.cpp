@@ -32,6 +32,8 @@ NAVStream::NAVStream(AVStream *pStream){
   this->pContext = pStream;
 }
 NAVStream::~NAVStream(){
+  // TODO: clean ups?
+  fprintf(stderr, "NAVStream destroyed\n");
 }
 
 void NAVStream::Init(){

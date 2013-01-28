@@ -42,8 +42,8 @@ NAVCodecContext::NAVCodecContext(AVCodecContext *pContext){
 }
   
 NAVCodecContext::~NAVCodecContext(){
-  printf("NAVCodecContext destructor");
- // avcodec_close(pContext);
+  fprintf(stderr, "NAVCodecContext destructor\n");
+//  avcodec_close(pContext);
 }
   
 void NAVCodecContext::Init(){

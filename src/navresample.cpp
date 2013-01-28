@@ -48,7 +48,7 @@ NAVResample::NAVResample(){
 }
 
 NAVResample::~NAVResample(){
-  printf("NAVResample destructor\n");
+  fprintf(stderr, "NAVResample destructor\n");
   
   avresample_free(&pContext);
   

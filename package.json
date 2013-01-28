@@ -5,8 +5,7 @@
   "version": "0.2.0",
   "main": "./index.js",
   "scripts": {
-    "preuninstall": "make clean",	
-    "pretest" : "make test"
+    "test" : "mocha --reporter spec --bail --globals requirejsVars test/simple.test.js"
   },
   "repository": {
      "type": "git",

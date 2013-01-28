@@ -12,12 +12,17 @@ var inputs = [ fixtureDir + "/uncharted3.mp4",
               
 var audios = [ fixtureDir + "/walk.flac"];
 
-// create output directory for fixture results
-if(!path.exists(fixtureDir + "/transcode")) {
-   fs.mkdirSync(fixtureDir + "/transcode");
-}
-
 describe('Video', function(){
+  
+  before(function(done){
+    // create output directory for fixture results
+    fs.exists(fixtureDir + "/transcode", function(exists){
+      if(!exists){
+        fs.mkdirSync(fixtureDir + "/transcode");
+      }
+      done();
+    })
+  })
 
 	describe('open', function(){
 		it('should return a media object', function(){
@@ -39,6 +44,7 @@ describe('Video', function(){
 	
 	describe('transcode', function(){
 	  it('should transcode to a mp4 video', function(done){
+      this.timeout(50000);
   	  navcodec.open(inputs[0], function(err, media){
 	      should.not.exist(err);
 	      should.exist(media);
@@ -56,6 +62,8 @@ describe('Video', function(){
 	      media.transcode(function(err, progress, time){
 	        should.not.exist(err);
 	      
+          console.log("progress:"+progress);
+        
 	        if(progress === 100){
 	          done();
 	        }
@@ -67,6 +75,7 @@ describe('Video', function(){
 	
 	describe('thumbnail', function(){
 	  it('should transcode to a mp4 video and create a thumbnail', function(done){
+      this.timeout(50000);
 	    navcodec.open(inputs[1], function(err, media){
 	      should.not.exist(err);
 	      should.exist(media);
@@ -109,6 +118,7 @@ describe('Video', function(){
 	describe('Audio', function(){
 		it('open should return a media object', function(){
 		  navcodec.open(audios[0], function(err, media){
+        console.log(media)
 		    should.not.exist(err);
 		    should.exist(media);
 		    should.exist(media.audioBitrate);

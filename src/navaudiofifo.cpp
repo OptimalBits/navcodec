@@ -44,7 +44,7 @@ NAVAudioFifo::NAVAudioFifo(AVCodecContext *pEncoder){
 }
   
 NAVAudioFifo::~NAVAudioFifo(){
-  printf("NAVAudioFifo destructor\n");
+  fprintf(stderr, "NAVAudioFifo destructor\n");
 
   av_fifo_free(pFifo);
   

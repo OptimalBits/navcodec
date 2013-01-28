@@ -140,11 +140,6 @@ static void CleanUp(Baton *pBaton){
   delete pBaton;
 }
 
-Handle<Value> MyFunction(const Arguments& args) {
-  HandleScope scope;
-  return scope.Close(String::New("hello world"));
-}
-
 static void AsyncAfter(uv_work_t* req) {
   HandleScope scope;
   Baton* pBaton = static_cast<Baton*>(req->data);
@@ -240,7 +235,7 @@ NAVFormat::NAVFormat(){
 }
   
 NAVFormat::~NAVFormat(){
-  printf("NAVFormat destructor\n");
+  fprintf(stderr, "NAVFormat destructor\n");
   avformat_close_input(&pFormatCtx);
   free(filename);
 }
@@ -307,11 +302,9 @@ Handle<Value> NAVFormat::New(const Arguments& args) {
     SET_KEY_VALUE(self, "streams", streams);
     SET_KEY_VALUE(self, "duration", Number::New(pFormatCtx->duration / (float) AV_TIME_BASE));
   }
-  
-  if(pFormatCtx->metadata){
-    SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
-  }
 
+  SET_KEY_VALUE(self, "metadata", NAVDictionary::New(pFormatCtx->metadata));
+  
   return self;
 }
 

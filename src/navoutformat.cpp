@@ -74,7 +74,7 @@ NAVOutputFormat::NAVOutputFormat(){
 }
 
 NAVOutputFormat::~NAVOutputFormat(){
-  printf("NAVOutputFormat destructor\n");
+  fprintf(stderr, "NAVOutputFormat destructor\n");
   free(filename);
   av_free(pVideoBuffer);
   av_free(pAudioBuffer);
