@@ -148,12 +148,14 @@ static void AsyncAfter(uv_work_t* req) {
     Local<Value> err = Exception::Error(String::New(pBaton->error));
     Local<Value> argv[] = { err };
     
-    TryCatch try_catch;
+    //TryCatch try_catch;
     pBaton->callback->Call(Context::GetCurrent()->Global(), 1, argv);
     
+    /*
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
     }
+    */
     
     CleanUp(pBaton);
   } else {
@@ -218,11 +220,13 @@ Handle<Value> DecoderNotifier::Done(const Arguments& args) {
 
   DecoderNotifier* obj = ObjectWrap::Unwrap<DecoderNotifier>(args.This());
   
-  // Process next frame
-  uv_queue_work(uv_default_loop(),
-                &(obj->pBaton->request),
-                AsyncWork,
-                AsyncAfter);
+ if(args.Length() == 0){
+    // Process next frame
+    uv_queue_work(uv_default_loop(),
+                  &(obj->pBaton->request),
+                  AsyncWork,
+                  AsyncAfter);
+  }
   
   return Undefined();
 }
