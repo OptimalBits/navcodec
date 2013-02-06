@@ -2,7 +2,7 @@
   "author": "Manuel Astudillo <manuel@optimalbits.com> (http://optimalbits.com)",
   "name": "navcodec",
   "description": "libavcodec bindings for node",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "./index.js",
   "scripts": {
     "test" : "mocha --reporter spec --bail --globals requirejsVars test/simple.test.js"
