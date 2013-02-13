@@ -29,6 +29,7 @@ using namespace v8;
 // Cheap layout guessing
 int numChannesToLayout(int numChannels){
   switch(numChannels){
+    case 1: return AV_CH_LAYOUT_MONO;
     case 2: return AV_CH_LAYOUT_STEREO;
     case 3: return AV_CH_LAYOUT_2POINT1;
     case 4: return AV_CH_LAYOUT_3POINT1;
