@@ -65,6 +65,7 @@ Handle<Value> NAVStream::New(AVStream *pStream){
   
   SET_KEY_VALUE(obj, "duration", Number::New(duration));
   SET_KEY_VALUE(obj, "metadata", NAVDictionary::New(pStream->metadata));
+  SET_KEY_VALUE(obj, "numFrames", Integer::New(pStream->nb_frames));
   
   if(pStream->r_frame_rate.num){
     Local<Object> frameRate = Object::New();

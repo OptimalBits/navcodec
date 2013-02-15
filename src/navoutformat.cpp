@@ -292,10 +292,11 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   
   if(codec_id == AV_CODEC_ID_MP3){
     pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16P; // AV_SAMPLE_FMT_S16
-    pCodecContext->channel_layout = AV_CH_LAYOUT_STEREO;
   } else {
     pCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
   }
+  
+  pCodecContext->channel_layout = AV_CH_LAYOUT_STEREO;
   
   if(codec_type == AVMEDIA_TYPE_AUDIO){
     instance->pAudioStream = pStream;
