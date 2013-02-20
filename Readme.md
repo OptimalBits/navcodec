@@ -24,9 +24,9 @@ Transcoding
 	    	videoBitrate:500000
 	    });
 	    
-	    media.transcode(function(err, progress, time){
+	    media.transcode(function(err, progress, finished, time){
 	      console.log(progress);
-	      if(progress === 100){
+	      if(finished){
 	        console.log('total transcoding time:'+time);
 	      }
 	    }
@@ -94,8 +94,26 @@ Several outputs can be added to the media object, and when transcoding the data 
     });
 
 
-Jpeg Thumbnails
--
+##Resolution video pyramid
+
+You can use Navcodec to transcode a video into multiple resolutions, forming
+a pyramid of resolutions, than can later be used to deliver the most efficient version for a given client in terms of screen resolution or bandwidth.
+
+    Media##addPyramid(basename: string, maxSize, minSize, options);
+
+
+So for example, if you want to transcode to a pyramid of images similar to the ones in you tube:
+
+    media.addPyramid('new.mp4', {width: 1920}, {witdh: 240}, {keepAspectRatio: true, videoBitrate: '2000k'});
+
+This will produce a pyramid of videos like the following:
+
+    1080-new.mp4
+    70
+
+
+##Jpeg Thumbnails
+
 
 A very common use case is the generation of a jpeg thumbnail to represent some video sequence. This can be easily accomplished by calling the function *thumbnail*. It can be called once or several times if different options are required. See the following example, where for every generated thumbnail a time offset is choosen:
 
@@ -238,9 +256,9 @@ References
 Roadmap
 -
 
-- Multiple pass encoding.
-- Support for ffmpeg / avconv presets
-- Support for libavfilter.
+- Multiple pass encoding
+- Support presets
+- Support for filters
 
 License
 -
