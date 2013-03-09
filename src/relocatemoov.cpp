@@ -378,7 +378,7 @@ Handle<Value> RelocateMoov(const Arguments& args) {
   uv_queue_work(uv_default_loop(), 
                 &baton->request,
                 AsyncWork, 
-                AsyncAfter);
+                (uv_after_work_cb)AsyncAfter);
 
   return Undefined();
 }
