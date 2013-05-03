@@ -586,7 +586,7 @@ Handle<Value> NAVOutputFormat::Encode(const Arguments& args) {
   uv_queue_work(uv_default_loop(),
                 &(pBaton->request),
                 AsyncWork,
-                AsyncAfter);
+                (uv_after_work_cb)AsyncAfter);
   
   return Undefined();
   
