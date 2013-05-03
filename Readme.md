@@ -46,6 +46,8 @@ Available options (and their defaults):
     videoBitrate (input bitrate if available, 0 otherwise)
     videoCodec ( standard codec for current file container)
     keepAspectRatio (true)
+    fps (specify the output frames per second)
+    minFps (specify the output minimum frames per second)
     skipVideo (false)
     skipVideoFrames (0)*
     
