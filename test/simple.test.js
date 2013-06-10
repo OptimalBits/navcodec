@@ -114,6 +114,67 @@ describe('Video', function(){
 	    });
 	  });
 	});
+
+	describe('rotation', function(){
+	  it('should rotate clockwise', function(done){
+      this.timeout(50000);
+  	  navcodec.open(inputs[0], function(err, media){
+	      should.not.exist(err);
+	      should.exist(media);
+	    
+	      var options = {
+	        width:640,
+	        height:480,
+	        videoBitrate:600000,
+	        keepAspectRatio:true,
+	        channels:2,
+          rotate: 'clock'
+	      };
+	    
+	      media.addOutput(fixtureDir + '/transcode/output_c.mp4', options);
+	    
+	      media.transcode(function(err, progress, time){
+	        should.not.exist(err);
+	      
+          console.log("progress:"+progress);
+        
+	        if(progress === 100){
+	          done();
+	        }
+	      });
+	      media = null;
+	    });
+	  });
+	  it('should rotate counter clockwise', function(done){
+      this.timeout(50000);
+  	  navcodec.open(inputs[0], function(err, media){
+	      should.not.exist(err);
+	      should.exist(media);
+	    
+	      var options = {
+	        width:640,
+	        height:480,
+	        videoBitrate:600000,
+	        keepAspectRatio:true,
+	        channels:2,
+          rotate: 'cclock'
+	      };
+	    
+	      media.addOutput(fixtureDir + '/transcode/output_cc.mp4', options);
+	    
+	      media.transcode(function(err, progress, time){
+	        should.not.exist(err);
+	      
+          console.log("progress:"+progress);
+        
+	        if(progress === 100){
+	          done();
+	        }
+	      });
+	      media = null;
+	    });
+	  });
+	});
 	
 	describe('Audio', function(){
 		it('open should return a media object', function(){
