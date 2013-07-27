@@ -40,7 +40,6 @@ void NAVStream::Init(){
   HandleScope scope;
   
   Local<ObjectTemplate> templ = ObjectTemplate::New();
-  templ = ObjectTemplate::New();
   templ->SetInternalFieldCount(1);
   
   NAVStream::templ = Persistent<ObjectTemplate>::New(templ);

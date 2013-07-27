@@ -50,7 +50,6 @@ void NAVCodecContext::Init(){
   HandleScope scope;
     
   Local<ObjectTemplate> templ = ObjectTemplate::New();
-  templ = ObjectTemplate::New();
   templ->SetInternalFieldCount(1);
     
   // Accessors make us simulate read-only properties.
