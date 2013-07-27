@@ -36,7 +36,6 @@ void NAVDictionary::Init(){
   HandleScope scope;
   
   Local<ObjectTemplate> templ = ObjectTemplate::New();
-  templ = ObjectTemplate::New();
   templ->SetInternalFieldCount(1);
   
   NAVDictionary::templ = Persistent<ObjectTemplate>::New(templ);
