@@ -132,7 +132,7 @@ Handle<Value> NAVThumbnail::Write(const Arguments& args) {
   }
 
   if(!(args[2]->IsFunction())){
-    return ThrowException(Exception::TypeError(String::New("Third parameter must be a funcion")));
+    return ThrowException(Exception::TypeError(String::New("Third parameter must be a function")));
   }
   
   callback = Local<Function>::Cast(args[2]);
