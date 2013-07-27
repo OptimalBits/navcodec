@@ -126,10 +126,7 @@ Handle<Value> NAVThumbnail::Write(const Arguments& args) {
   AVFrame *pFrame = (node::ObjectWrap::Unwrap<NAVFrame>(frame))->pContext;
 
   String::Utf8Value v8str(args[1]);
-  char *filename = strdup(*v8str);
-  if(filename == NULL){
-    return ThrowException(Exception::Error(String::New("Error allocating filename string")));
-  }
+  char *filename = *v8str;
 
   if(!(args[2]->IsFunction())){
     return ThrowException(Exception::TypeError(String::New("Third parameter must be a function")));
