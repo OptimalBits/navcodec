@@ -15,7 +15,7 @@ Transcoding
 
 	navcodec = require('navcodec');
 	
-	navcodec.open('myinput.mov', function(err, media){
+	navcodec.open('myinput.mov', null, function(err, media){
 	  if(media){
 	    media.addOutput('myoutput.mp4', {
 	    	width:640,
@@ -27,7 +27,7 @@ Transcoding
 	    media.transcode(function(err, progress, finished, time){
 	      console.log(progress);
 	      if(finished){
-	        console.log('total transcoding time:'+time);
+	        console.log("Total transcoding time: " + time + "ms");
 	      }
 	    }
 	  }
@@ -40,29 +40,41 @@ Since the transcode uses mostly *libavcodec* optimized functions, the above exam
 
 Available options (and their defaults):
 
+    // Input
+    itsoffset       (n/a)
+    y               (true)
+    stats           (true)
+    logLevel        (n/a)
+
+    // Output
+    streamCopy      (n/a, nullfies a videoBitrate, videoCodec, audioBitrate, audioCodec, sampleRate)
+
     // Video
-    width ( input width )
-    height (input height )
-    videoBitrate (input bitrate if available, 0 otherwise)
-    videoCodec ( standard codec for current file container)
+    width           (input width)
+    height          (input height)
+    videoBitrate    (input bitrate if available, 0 otherwise)
+    videoCodec      (standard codec for current file container)
     keepAspectRatio (true)
-    rotate ('clock' for clockwise, 'cclock' for counter clockwise)
-    fps (specify the output frames per second)
-    minFps (specify the output minimum frames per second)
-    skipVideo (false)
+    rotate          ('clock' for clockwise, 'cclock' for counter clockwise)
+    fps             (specify the output frames per second)
+    minFps          (specify the output minimum frames per second)
+    skipVideo       (false)
     skipVideoFrames (0)*
-    
+    videoBSF        (n/a)
+    format          (n/a)
+
     // Audio
-    audioBitrate (input bitrate if available, 0 otherwise)
-    sampleRate (44100)
-    channels (2),
-    audioCodec (standard codec for current file container)
-    skipAudio (false)
+    audioBitrate    (input bitrate if available, 0 otherwise)
+    sampleRate      (44100)
+    channels        (2)
+    audioCodec      (standard codec for current file container)
+    skipAudio       (false)
+    format          (n/a)
   
     // Thumbnails
     keepAspectRatio (true)
-    width ( input width )
-    height (input height )
+    width           (input width)
+    height          (input height)
     
     *Experimental feature.
 
@@ -71,7 +83,7 @@ Multiple outputs
 
 Several outputs can be added to the media object, and when transcoding the data will be processed in parallel. This is quite convenient when generating thumbnails (which will be very cheap to generate), or if several output formats are required (will only require one decoding process of the input file):
 
-    navcodec.open('myinput.mov', function(err, media){
+    navcodec.open('myinput.mov', null, function(err, media){
       if(media){
         media.addOutput('myoutput.mp4', {
     	    width:640,
@@ -90,7 +102,7 @@ Several outputs can be added to the media object, and when transcoding the data 
         media.transcode(function(err, progress, time){
           console.log(progress);
           if(progress === 100){
-            console.log('total transcoding time:'+time);
+            console.log("Total transcoding time: " + time + "ms");
           }
         });
       }
@@ -121,7 +133,7 @@ This will produce a pyramid of videos like the following:
 A very common use case is the generation of a jpeg thumbnail to represent some video sequence. This can be easily accomplished by calling the function *thumbnail*. It can be called once or several times if different options are required. See the following example, where for every generated thumbnail a time offset is choosen:
 
     
-    navcodec.open('myinput.mov', function(err, media){
+    navcodec.open('myinput.mov', null, function(err, media){
       if(media){
         media.thumbnail([{'first128.jpg':1, 'secong128.jpg:100.5'},{width:128,height:128});
         media.thumbnail([{'first64.jpg':1, 'secong64.jpg:100.5'},{width:64,height:64});
@@ -129,7 +141,7 @@ A very common use case is the generation of a jpeg thumbnail to represent some v
         media.transcode(function(err, progress, time){
           console.log(progress);
           if(progress === 100){
-            console.log('total transcoding time:'+time);
+            console.log("Total transcoding time: " + time + "ms");
           }
         });
       }
