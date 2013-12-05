@@ -2,21 +2,23 @@
   "author": "Manuel Astudillo <manuel@optimalbits.com> (http://optimalbits.com)",
   "name": "navcodec",
   "description": "libavcodec bindings for node",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "main": "./index.js",
   "scripts": {
-    "test" : "mocha --reporter spec --bail --globals requirejsVars test/simple.test.js"
+    "test": "mocha --reporter spec --bail --globals requirejsVars test/simple.test.js"
   },
   "repository": {
-     "type": "git",
-     "url": "git://github.com/OptimalBits/navcodec.git"
+    "type": "git",
+    "url": "git://github.com/OptimalBits/navcodec.git"
   },
   "engines": {
     "node": ">=0.8.0"
   },
   "dependencies": {
     "underscore": "*",
-    "async": "*"
+    "async": "*",
+    "when": "~2.7.0",
+    "printf": "~0.1.2"
   },
   "devDependencies": {
     "mocha": "*",
