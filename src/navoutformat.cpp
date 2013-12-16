@@ -235,7 +235,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
   Local<Object> self = args.This();
   
   AVMediaType codec_type;
-  CodecID codec_id;
+  AVCodecID codec_id;
   
   NAVOutputFormat* instance = UNWRAP_OBJECT(NAVOutputFormat, args);
   
@@ -266,7 +266,7 @@ Handle<Value> NAVOutputFormat::AddStream(const Arguments& args) {
     codec_id = instance->pOutputFormat->audio_codec;
   }
   
-  codec_id = (CodecID) GET_OPTION_UINT32(options, codec, codec_id);
+  codec_id = (AVCodecID) GET_OPTION_UINT32(options, codec, codec_id);
   
   AVCodec* pCodec = avcodec_find_encoder(codec_id);
   if (!pCodec) {
