@@ -8,7 +8,8 @@ var navcodec = require('../'),
 var fixtureDir = __dirname + '/fixtures';
 
 var inputs = [ fixtureDir + "/uncharted3.mp4", 
-               fixtureDir + "/oceans-clip.mp4"];
+               fixtureDir + "/oceans-clip.mp4",
+               fixtureDir + "/chunk.wmv"];
               
 var audios = [ fixtureDir + "/walk.flac"];
 
@@ -67,6 +68,32 @@ describe('Video', function(){
 	        if(progress === 100){
 	          done();
 	        }
+	      });
+	      media = null;
+	    });
+	  });
+    
+	  it('should return error with bogus input video', function(done){
+      this.timeout(5000);
+  	  navcodec.open(inputs[2], function(err, media){
+	      should.not.exist(err);
+	      should.exist(media);
+	    
+	      var options = {
+	        width:640,
+	        height:480,
+	        videoBitrate:600000,
+	        keepAspectRatio:true,
+	        channels:2,  
+	      };
+	    
+	      media.addOutput(fixtureDir + '/transcode/output.mp4', options);
+	    
+	      media.transcode(function(err, progress, time){	        
+          should.exist(err);
+          progress.should.equal(100)
+        
+	        done();
 	      });
 	      media = null;
 	    });
