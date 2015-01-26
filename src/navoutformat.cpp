@@ -382,7 +382,7 @@ Handle<Value> NAVOutputFormat::Begin(const Arguments& args) {
   return Undefined();
 }
 
-#if 0
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(54, 01, 0)
 const char *NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFrame, int *outSize){
   int ret;
   AVCodecContext *pContext = pStream->codec;
@@ -439,11 +439,7 @@ const char * NAVOutputFormat::EncodeVideoFrame(AVStream *pStream, AVFrame *pFram
     videoFrame++;
   }
 
-#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(54, 01, 0)
   *outSize = avcodec_encode_video(pContext, pVideoBuffer, videoBufferSize, pFrame);
-#else
-  *outSize = avcodec_encode_video2(pContext, pVideoBuffer, videoBufferSize, pFrame);
-#endif
 
   if(*outSize < 0){
     return "Error encoding frame";
