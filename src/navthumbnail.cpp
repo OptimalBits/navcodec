@@ -75,7 +75,7 @@ Handle<Value> NAVThumbnail::New(const Arguments& args) {
 
   Local<Object> options = Local<Object>::Cast(args[0]);
   
-  AVCodec *pCodec = avcodec_find_encoder(CODEC_ID_MJPEG);
+  AVCodec *pCodec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
 	if (!pCodec) {
     return ThrowException(Exception::TypeError(String::New("Could not alloc codec")));
 	}

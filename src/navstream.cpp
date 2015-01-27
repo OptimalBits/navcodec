@@ -66,14 +66,20 @@ Handle<Value> NAVStream::New(AVStream *pStream){
   SET_KEY_VALUE(obj, "metadata", NAVDictionary::New(pStream->metadata));
   SET_KEY_VALUE(obj, "numFrames", Integer::New(pStream->nb_frames));
   
-  if(pStream->r_frame_rate.num){
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(52, 42, 0)
+  AVRational fr = pStream->r_frame_rate;
+#else
+  AVRational fr = pStream->avg_frame_rate;
+#endif
+
+  if(fr.num){
     Local<Object> frameRate = Object::New();
-  
-    SET_KEY_VALUE(frameRate, "num", Integer::New(pStream->r_frame_rate.num));
-    SET_KEY_VALUE(frameRate, "den", Integer::New(pStream->r_frame_rate.den));
-  
+
+    SET_KEY_VALUE(frameRate, "num", Integer::New(fr.num));
+    SET_KEY_VALUE(frameRate, "den", Integer::New(fr.den));
+
     SET_KEY_VALUE(obj, "frameRate", frameRate);
   }
-  
+
   return scope.Close(obj);
 }
