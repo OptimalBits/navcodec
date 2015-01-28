@@ -50,6 +50,18 @@
               "-lavresample",
               "-lavutil"
           ]
+        }],
+        ['OS=="win"', {
+            "include_dirs": [
+                "$(LIBAV_PATH)include"
+                ],
+            "libraries" : [
+                  "-l$(LIBAV_PATH)avcodec",
+                  "-l$(LIBAV_PATH)avformat",
+                  "-l$(LIBAV_PATH)swscale",
+                  "-l$(LIBAV_PATH)avresample",
+                  "-l$(LIBAV_PATH)avutil"
+                ]
         }]
       ],
 	  }
