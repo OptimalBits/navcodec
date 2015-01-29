@@ -229,8 +229,7 @@ Compiling libavcodec (Recommended)
 
 - Uncompress the tarball, Ex:
 
-    tar -xvf libav-0.9.1.tar.gz
-    cd libav-0.9.1
+		tar -xvf libav-0.9.1.tar.gz && cd libav-0.9.1
   
 - Configure your makefile, example:
 
