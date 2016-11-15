@@ -1,3 +1,5 @@
+DEPRECATED: Please use [fluent-ffmpeg](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg) instead.
+
 Node Audio and Video Transcoding Library [![BuildStatus](https://secure.travis-ci.org/OptimalBits/navcodec.png?branch=master)](http://travis-ci.org/optimalbits/navcodec)
 =
 
